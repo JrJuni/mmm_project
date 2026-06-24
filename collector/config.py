@@ -43,10 +43,17 @@ class CollectorConfig:
     # a collection one (see `selected_countries`).
     display_n: int = 12
 
-    # Optional display selection (ISO alpha-2 codes). When set, the grid and any
-    # future read-only lookup show exactly these instead of the top `display_n`.
-    # This filters the cached pool — it never triggers a SerpApi call.
-    selected_countries: list[str] | None = None
+    # Display selection (ISO alpha-2 codes). The grid (and any future read-only
+    # lookup) shows exactly these, in this order, instead of the top `display_n`.
+    # This filters the cached pool — it never triggers a SerpApi call. Default is
+    # a stable "12 largest economies (nominal GDP)" view; change it with the dev
+    # admin CLI (`select ...` / `clear-select`). Set to None for top-`display_n`.
+    selected_countries: list[str] | None = field(
+        default_factory=lambda: [
+            "US", "CN", "DE", "JP", "IN", "GB",
+            "FR", "IT", "BR", "CA", "RU", "KR",
+        ]
+    )
 
     # --- Cost control ----------------------------------------------------
     # Two periods (current 7d + previous 7d) are needed to compute change.
