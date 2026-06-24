@@ -45,7 +45,7 @@ defaults. The MCP server and UI never read or write overrides.
 ```json
 {
   "meta": {
-    "keyword": "Arencia",
+    "keyword": "Demo Brand",
     "geo": "worldwide",
     "updated_at": "ISO-8601 UTC",
     "source": "serpapi:google_trends:GEO_MAP_0",

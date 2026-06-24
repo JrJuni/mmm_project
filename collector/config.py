@@ -25,7 +25,13 @@ class CollectorConfig:
     # company comparison in the Trend index (`collector/trends.py`), where
     # SerpApi compares all of them in one co-normalized call per horizon.
     # Keep it short on the free tier.
-    keywords: list[str] = field(default_factory=lambda: ["Arencia"])
+    #
+    # The primary brand is a deployment parameter, not committed: set it via the
+    # MMM_KEYWORD environment variable (e.g. in the gitignored .env). The shipped
+    # default is a generic placeholder so the public repo is brand-agnostic.
+    keywords: list[str] = field(
+        default_factory=lambda: [os.environ.get("MMM_KEYWORD") or "Demo Brand"]
+    )
 
     # Geo scope. "" = worldwide. SerpApi returns per-country breakdown when
     # data_type=GEO_MAP_0 and region=COUNTRY.

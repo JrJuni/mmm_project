@@ -1,4 +1,4 @@
-"""mmm-search-mcp: a read-only MCP server over the Arencia search-demand cache.
+"""mmm-search-mcp: a read-only MCP server over the search-demand cache.
 
 This server NEVER calls SerpApi. It only reads the cached `data/data.json` that
 the collector (run by cron) produces. Consequences:
@@ -145,7 +145,7 @@ def get_search_data() -> dict[str, Any]:
 def get_top_markets(n: int = 5) -> dict[str, Any]:
     """Return the top N countries by current search interest (target shortlist).
 
-    Useful for: "which markets should we prioritize for Arencia?" The cache is
+    Useful for: "which markets should we prioritize for the brand?" The cache is
     already sorted by interest; this trims to N.
     """
     n = max(1, min(int(n), 50))

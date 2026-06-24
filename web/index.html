@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Arencia · search demand by country</title>
+<title>Search demand by country</title>
 <style>
   :root{
     --bg:#ffffff; --fg:#1d1c1a; --muted:#6b6a64; --hint:#9a988f;
@@ -152,6 +152,10 @@
       legend = document.getElementById('legend'),
       errEl = document.getElementById('err');
 
+  // Current primary keyword/brand (a parameter, not hardcoded).
+  function kw(){ return (META && META.keyword) ||
+    (TRENDS && TRENDS.meta && TRENDS.meta.keywords && TRENDS.meta.keywords[0]) || "the brand"; }
+
   function maxInterest(){ return DATA.reduce(function(m,d){return Math.max(m,d.interest||0);},1); }
 
   function volShade(v){
@@ -254,8 +258,8 @@
           '<div class="val" style="color:'+fg+'">'+val+'</div>';
       }
       el.onclick = function(){
-        var msg = "Arencia 검색 수요 관점에서 "+d.country_code+
-          " 시장을 더 분석해줘 (경쟁도, CPC, 인구당 검색량 포함)";
+        var msg = "Analyze the " + d.country_code + " market for " + kw() +
+          " from a search-demand perspective (competition, CPC, searches per capita).";
         if (window.sendPrompt) { window.sendPrompt(msg); }
         else { navigator.clipboard && navigator.clipboard.writeText(msg); }
       };
@@ -370,6 +374,7 @@
       if(hrs > (META.staleness_max_hours || 72)) stale = " · ⚠ STALE";
     }
     document.getElementById('kw').textContent = "keyword: " + (META.keyword||"—");
+    document.title = kw() + " · search demand by country";
     document.getElementById('meta').textContent =
       (META.geo||"worldwide") + " · showing " + DATA.length + " of " +
       (POOL.length || DATA.length) + " countries · updated " + when + stale +
@@ -408,7 +413,8 @@
   }
 
   function analyzeMsg(c){
-    return "Arencia 검색 수요에서 " + c + " 시장이 WoW로 급변했어. 원인과 대응을 분석해줘.";
+    return kw() + " search demand in " + c + " moved sharply week-over-week. " +
+      "Analyze the likely cause and what to do.";
   }
 
   function renderAlerts(){
@@ -478,7 +484,9 @@
   };
 
   function loadTrends(){
+    // fall back to the committed sample so a fresh clone previews without collecting
     return fetch('../data/trends.json?ts=' + Date.now())
+      .then(function(r){ return r.ok ? r : fetch('../data/trends.sample.json?ts=' + Date.now()); })
       .then(function(r){ return r.ok ? r.json() : null; })
       .then(function(t){ TRENDS = t; KW = (t && t.meta && t.meta.keywords) || []; kwEdit = KW.slice(); if(mode==="trend") render(); })
       .catch(function(){ TRENDS = null; });
@@ -488,6 +496,7 @@
     errEl.hidden = true;
     loadTrends();
     return fetch('../data/data.json?ts=' + Date.now())
+      .then(function(r){ return r.ok ? r : fetch('../data/data.sample.json?ts=' + Date.now()); })
       .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
       .then(function(doc){
         POOL = doc.countries || [];

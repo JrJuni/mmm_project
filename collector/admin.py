@@ -16,7 +16,7 @@ any of this over MCP, and never wire it to untrusted input.
 
 Usage:
     python -m collector.admin show
-    python -m collector.admin set-keyword "Arencia"
+    python -m collector.admin set-keyword "YourBrand"
     python -m collector.admin set-geo ""                # "" = worldwide
     python -m collector.admin set-topn 50               # or: all  (keep every country)
     python -m collector.admin set-display-n 12

@@ -1,11 +1,15 @@
 {
   "meta": {
-    "keyword": "Arencia",
+    "keyword": "Demo Brand",
     "geo": "worldwide",
     "updated_at": "2026-06-24T09:11:50.078505+00:00",
     "source": "sample",
     "periods": 2,
-    "country_count": 12
+    "country_count": 12,
+    "display_n": 12,
+    "selected_countries": [],
+    "staleness_max_hours": 72,
+    "quota": { "projected_monthly_calls": 60, "monthly_budget": 250, "within_budget": true }
   },
   "countries": [
     {

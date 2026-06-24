@@ -1,4 +1,4 @@
-"""Data collection layer for the Arencia search-demand monitor.
+"""Data collection layer for the search-demand monitor.
 
 This is the ONLY component that calls SerpApi. Everything else (the static web
 grid, the MCP server) reads the cached `data/data.json`. That separation is the

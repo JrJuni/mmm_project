@@ -2,8 +2,8 @@
 
 This is the first-run guide for an AI agent helping a user set up and operate
 `mmm-search-mcp` — a read-only MCP server that surfaces Google Trends per-country
-search demand for a tracked keyword (default: Arencia), for marketing-mix
-modeling (MMM) target-market analysis.
+search demand for a tracked keyword (set via the `MMM_KEYWORD` env var), for
+marketing-mix modeling (MMM) target-market analysis.
 
 Read this before deeper docs. For architecture detail see
 [`docs/architecture.md`](docs/architecture.md). For agent operating rules see
@@ -143,7 +143,7 @@ Once the cache exists:
 
 ```text
 Run config_doctor and tell me if the search-demand cache is ready and fresh.
-Which countries have the highest Arencia search interest right now?
+Which countries have the highest search interest for the brand right now?
 Summarize search demand by continent.
 Which markets are growing the fastest week over week?
 ```

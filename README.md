@@ -9,8 +9,8 @@ and a single cached JSON file between them.
 
 ## What it does
 
-- Collects per-country search interest for a tracked keyword (default:
-  `Arencia`) from Google Trends via SerpApi.
+- Collects per-country search interest for your tracked keyword (set via the
+  `MMM_KEYWORD` env var) from Google Trends via SerpApi.
 - Caches it to `data/data.json` with current vs previous-week values and a
   week-over-week change.
 - Renders a 4-column country grid (`web/index.html`) colored by **continent**,
@@ -69,18 +69,21 @@ git clone https://github.com/JrJuni/mmm_project
 cd mmm_project
 python -m pip install -r requirements.txt
 
-cp .env.example .env       # then edit .env and set SERPAPI_KEY (local only)
+cp .env.example .env    # set SERPAPI_KEY and MMM_KEYWORD (your brand) — local only
 
-python -m collector.fetch_data        # first collection -> data/data.json
-python -m http.server 8000            # serve repo root
+python -m collector.fetch_data   # country grid + WoW  -> data/data.json   (2 calls)
+python -m collector.trends       # Trend index series  -> data/trends.json (5 calls)
+python -m collector.serve        # serve the grid + in-browser keyword editing
 # open http://localhost:8000/web/index.html
 ```
 
-No key yet? Copy the bundled sample to see the grid with zero cost:
+`collector.serve` is a local dev server: it serves the static grid and lets the
+"Companies" panel edit the compared keywords on demand (it is local/dev only and
+never part of the shipped read-only surfaces). A plain `python -m http.server`
+also works for viewing.
 
-```bash
-cp data/data.sample.json data/data.json
-```
+No key yet? The grid automatically falls back to the bundled `*.sample.json`, so
+just serve and open it to preview with demo data.
 
 ### Schedule collection (cron, daily)
 
