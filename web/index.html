@@ -26,6 +26,7 @@
     }
   }
   *{box-sizing:border-box;}
+  [hidden]{display:none !important;}
   body{
     margin:0; padding:28px 20px; background:var(--bg); color:var(--fg);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
@@ -69,6 +70,18 @@
   .tile.demo{border-style:dashed;}
   .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
   .spark-axis{display:flex; justify-content:space-between; font-size:9px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
+  .alarm{background:rgba(226,75,74,0.12); border:0.5px solid var(--down); border-radius:var(--radius-sm); padding:8px 12px; margin:8px 0; font-size:13px;}
+  .alarm button{margin-left:8px; padding:2px 8px;}
+  .panel{display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13px; color:var(--muted);}
+  .panel input{width:60px; padding:4px 6px; border:0.5px solid var(--border2); border-radius:6px; background:transparent; color:var(--fg); font:inherit;}
+  .tile.alarm-tile{outline:2px solid var(--down); outline-offset:-2px;}
+  .alog{margin-top:16px; font-size:13px;}
+  .alog-h{font-weight:500; margin-bottom:6px; display:flex; align-items:center; gap:8px;}
+  .alog-h button{padding:2px 8px;}
+  .alog .arow{padding:5px 0; cursor:pointer; border-bottom:0.5px solid var(--border);}
+  .alog .arow:hover{color:var(--down);}
+  .alog .sub{font-size:12px; color:var(--hint);}
+  .alog-sub{margin-top:10px; margin-bottom:2px; font-size:11px; color:var(--hint); text-transform:uppercase; letter-spacing:.04em;}
 </style>
 </head>
 <body>
@@ -77,14 +90,23 @@
     <span class="kw" id="kw">keyword: —</span>
   </header>
   <div class="meta" id="meta">loading cache…</div>
+  <div class="alarm" id="alarm" hidden></div>
 
   <div class="controls">
     <span class="label">Shade by</span>
     <button id="m-cont" class="on">Continent</button>
     <button id="m-trend">Trend index</button>
     <button id="m-chg">WoW change</button>
+    <button id="alert-cfg">⚙ Alerts</button>
     <span class="spacer"></span>
     <button id="refresh"><span id="rtxt">Refresh</span></button>
+  </div>
+
+  <div class="panel" id="alert-panel" hidden>
+    <span class="label">Alert when |WoW change| ≥</span>
+    <input id="alert-input" type="number" min="1" max="500" step="1" value="50"> %
+    <button id="alert-save">Save</button>
+    <span class="demonote">scans all markets; click a row to analyze</span>
   </div>
 
   <div class="controls" id="horizons" hidden>
@@ -99,6 +121,7 @@
 
   <div class="grid" id="grid"></div>
   <div class="legend" id="legend"></div>
+  <div class="alog" id="alert-log" hidden></div>
   <div class="err" id="err" hidden></div>
 
   <p class="foot">
@@ -208,6 +231,7 @@
         } else {
           bg = chgShade(p);
           val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
+          if(isAlert(d)) el.classList.add('alarm-tile');
         }
         el.style.background = bg;
         el.innerHTML =
@@ -259,6 +283,7 @@
       document.getElementById(pair[1]).classList.toggle("on", pair[0]===m);
     });
     render();
+    renderAlerts();
   }
   document.getElementById('m-cont').onclick=function(){setMode("cont");};
   document.getElementById('m-trend').onclick=function(){setMode("trend");};
@@ -303,6 +328,107 @@
       " · source " + (META.source||"—");
   }
 
+  // --- WoW change alerts (client-side, over the cached change_pct) ----------
+  // No SerpApi, no server: this only reads change_pct the collector already
+  // computed. Threshold is a per-browser setting (localStorage).
+  var ALERT_T = parseInt(localStorage.getItem('mmm_alert_threshold'), 10) || 50;
+  var ALERT_FLOOR = 10; // ignore negligible markets (interest < floor) to cut noise
+
+  function isAlert(d){
+    return d && d.change_pct != null && Math.abs(d.change_pct) >= ALERT_T
+      && (d.interest || 0) >= ALERT_FLOOR;
+  }
+  function alertsFor(){
+    return POOL.filter(isAlert).sort(function(a, b){
+      return Math.abs(b.change_pct) - Math.abs(a.change_pct);
+    });
+  }
+  function pct(p){ return (p >= 0 ? '+' : '') + p + '%'; }
+  function arrow(p){ return p >= 0 ? '🔺' : '🔻'; }
+
+  function readHistory(){
+    try { return JSON.parse(localStorage.getItem('mmm_alert_history') || '[]'); }
+    catch(e){ return []; }
+  }
+  function recordHistory(items){
+    if(!META.updated_at || !items.length) return;
+    var hist = readHistory();
+    if(hist.some(function(h){ return h.at === META.updated_at; })) return;
+    hist.unshift({ at: META.updated_at, t: ALERT_T,
+      items: items.map(function(d){ return { c: d.country_code, p: d.change_pct }; }) });
+    localStorage.setItem('mmm_alert_history', JSON.stringify(hist.slice(0, 20)));
+  }
+
+  function analyzeMsg(c){
+    return "Arencia 검색 수요에서 " + c + " 시장이 WoW로 급변했어. 원인과 대응을 분석해줘.";
+  }
+
+  function renderAlerts(){
+    var list = alertsFor();
+    recordHistory(list);
+
+    // Alarm banner — once per new data snapshot (dismiss is remembered).
+    var alarm = document.getElementById('alarm');
+    var ack = localStorage.getItem('mmm_alert_ack');
+    if(list.length && ack !== (META.updated_at || '')){
+      alarm.hidden = false;
+      alarm.innerHTML = '⚠ ' + list.length + ' market' + (list.length > 1 ? 's' : '') +
+        ' moved ≥ ±' + ALERT_T + '% week-over-week — ' +
+        list.slice(0, 3).map(function(d){ return d.country_code + ' ' + pct(d.change_pct); }).join(', ') +
+        (list.length > 3 ? ' …' : '') + ' <button id="alarm-x">dismiss</button>';
+      document.getElementById('alarm-x').onclick = function(){
+        alarm.hidden = true; localStorage.setItem('mmm_alert_ack', META.updated_at || '');
+      };
+    } else {
+      alarm.hidden = true;
+    }
+
+    // Log panel — visible in WoW (chg) mode.
+    var log = document.getElementById('alert-log');
+    log.hidden = (mode !== 'chg');
+    var rows = list.length
+      ? list.map(function(d){
+          return '<div class="arow" data-c="' + d.country_code + '">' + arrow(d.change_pct) +
+            ' <b>' + d.country_code + '</b> ' + pct(d.change_pct) +
+            ' <span class="sub">' + d.continent + ' · interest ' + d.interest + '</span></div>';
+        }).join('')
+      : '<div class="sub">No markets above ±' + ALERT_T + '% in this snapshot.</div>';
+    var hist = readHistory().filter(function(h){ return h.at !== META.updated_at; }).slice(0, 6);
+    var histRows = hist.map(function(h){
+      return '<div class="sub">' + new Date(h.at).toLocaleString() + ' · ±' + h.t + '% · ' +
+        h.items.length + ' (' + h.items.slice(0, 6).map(function(i){ return i.c; }).join(', ') +
+        (h.items.length > 6 ? '…' : '') + ')</div>';
+    }).join('');
+    log.innerHTML =
+      '<div class="alog-h">WoW alerts · ≥ ±' + ALERT_T + '% · ' + list.length + ' now' +
+      ' <button id="alert-cfg2">⚙ threshold</button></div>' + rows +
+      (histRows ? '<div class="alog-sub">earlier snapshots</div>' + histRows : '');
+    Array.prototype.forEach.call(log.querySelectorAll('.arow'), function(el){
+      el.onclick = function(){
+        var msg = analyzeMsg(el.getAttribute('data-c'));
+        if(window.sendPrompt) window.sendPrompt(msg);
+        else navigator.clipboard && navigator.clipboard.writeText(msg);
+      };
+    });
+    var cfg2 = document.getElementById('alert-cfg2');
+    if(cfg2) cfg2.onclick = toggleAlertPanel;
+  }
+
+  function toggleAlertPanel(){
+    var p = document.getElementById('alert-panel');
+    p.hidden = !p.hidden;
+    if(!p.hidden) document.getElementById('alert-input').focus();
+  }
+  document.getElementById('alert-input').value = ALERT_T;
+  document.getElementById('alert-cfg').onclick = toggleAlertPanel;
+  document.getElementById('alert-save').onclick = function(){
+    var v = parseInt(document.getElementById('alert-input').value, 10);
+    if(v > 0){ ALERT_T = v; localStorage.setItem('mmm_alert_threshold', String(v)); }
+    document.getElementById('alert-panel').hidden = true;
+    localStorage.removeItem('mmm_alert_ack'); // re-evaluate the banner for the new threshold
+    renderAlerts(); render();
+  };
+
   function loadTrends(){
     return fetch('../data/trends.json?ts=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
@@ -319,7 +445,7 @@
         POOL = doc.countries || [];
         META = doc.meta || {};
         applySelection();
-        fmtMeta(); render();
+        fmtMeta(); render(); renderAlerts();
       })
       .catch(function(e){
         errEl.hidden = false;
@@ -346,6 +472,8 @@
     setMode("trend");
     var hz = location.hash.split("/")[1];
     if(hz && SPAN[hz]) setHorizon(hz);
+  } else if(location.hash === "#chg"){
+    setMode("chg");
   }
   load();
 })();
