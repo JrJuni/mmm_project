@@ -64,6 +64,10 @@
   .foot{margin-top:16px; font-size:12px; color:var(--hint); line-height:1.6;}
   .err{color:var(--down); font-size:13px; margin-top:12px;}
   code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;}
+  .spark{width:100%; height:30px; margin-top:8px; display:block;}
+  .demonote{font-size:12px; color:var(--hint); font-style:italic;}
+  .tile.demo{border-style:dashed;}
+  .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
 </style>
 </head>
 <body>
@@ -76,10 +80,20 @@
   <div class="controls">
     <span class="label">Shade by</span>
     <button id="m-cont" class="on">Continent</button>
-    <button id="m-vol">Search interest</button>
+    <button id="m-trend">Trend index</button>
     <button id="m-chg">WoW change</button>
     <span class="spacer"></span>
     <button id="refresh"><span id="rtxt">Refresh</span></button>
+  </div>
+
+  <div class="controls" id="horizons" hidden>
+    <span class="label">Horizon</span>
+    <button id="h-1d">1d</button>
+    <button id="h-1w">1w</button>
+    <button id="h-1m">1m</button>
+    <button id="h-3m" class="on">3m</button>
+    <button id="h-1y">1y</button>
+    <span class="demonote">per-country lines are synthetic demo data</span>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -102,7 +116,7 @@
   };
   var CONTS = ["N. America","Asia","Europe","Oceania","S. America","M. East","Africa"];
   var cssv = function(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
-  var mode = "cont", DATA = [], POOL = [], META = {};
+  var mode = "cont", horizon = "3m", DATA = [], POOL = [], META = {}, TRENDS = null;
   var grid = document.getElementById('grid'),
       legend = document.getElementById('legend'),
       errEl = document.getElementById('err');
@@ -120,28 +134,55 @@
                : "rgba(226,75,74,"+(0.10+t*0.45).toFixed(2)+")";
   }
 
+  function spark(series, solid){
+    if(!series || !series.length) return '';
+    var n = series.length, w = 120, h = 30, pad = 2;
+    var max = Math.max.apply(null, series), min = Math.min.apply(null, series);
+    var rng = (max - min) || 1;
+    var pts = series.map(function(v, i){
+      var x = pad + (w - 2*pad) * (i / (n - 1 || 1));
+      var y = pad + (h - 2*pad) * (1 - (v - min) / rng);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    }).join(' ');
+    var col = series[n-1] >= series[0] ? cssv('--up') : cssv('--down');
+    var dash = solid ? '' : ' stroke-dasharray="3 2"';
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+
+      '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5"'+dash+'/></svg>';
+  }
+
   function render(){
     grid.innerHTML = "";
+    document.getElementById('horizons').hidden = (mode !== "trend");
     DATA.forEach(function(d){
       var el = document.createElement('div');
       el.className = "tile";
-      var bg = "transparent", fg = cssv('--fg'), sub = d.continent, val = "";
-      var p = d.change_pct;
-      if(mode==="cont"){
-        var r = RAMP[d.continent] || RAMP.Unknown;
-        bg = cssv(r[0]); fg = cssv(r[1]);
-        val = d.interest;
-      } else if(mode==="vol"){
-        bg = volShade(d.interest); val = d.interest;
+      var fg = cssv('--fg'), sub = d.continent;
+      if(mode==="trend"){
+        el.classList.add('demo');
+        var cs = (TRENDS && TRENDS.by_country && TRENDS.by_country[d.country_code]) || null;
+        var series = cs ? cs[horizon] : null;
+        el.innerHTML =
+          '<div><div class="name">'+d.country_code+'</div>'+
+          '<div class="sub">'+sub+'</div></div>'+
+          (series ? spark(series, false)
+                  : '<div class="val" style="opacity:.5">no data</div>');
       } else {
-        bg = chgShade(p);
-        val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
+        var bg = "transparent", val = "";
+        var p = d.change_pct;
+        if(mode==="cont"){
+          var r = RAMP[d.continent] || RAMP.Unknown;
+          bg = cssv(r[0]); fg = cssv(r[1]);
+          val = d.interest;
+        } else {
+          bg = chgShade(p);
+          val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
+        }
+        el.style.background = bg;
+        el.innerHTML =
+          '<div><div class="name" style="color:'+fg+'">'+d.country_code+'</div>'+
+          '<div class="sub" style="color:'+fg+'">'+sub+'</div></div>'+
+          '<div class="val" style="color:'+fg+'">'+val+'</div>';
       }
-      el.style.background = bg;
-      el.innerHTML =
-        '<div><div class="name" style="color:'+fg+'">'+d.country_code+'</div>'+
-        '<div class="sub" style="color:'+fg+'">'+sub+'</div></div>'+
-        '<div class="val" style="color:'+fg+'">'+val+'</div>';
       el.onclick = function(){
         var msg = "Arencia 검색 수요 관점에서 "+d.country_code+
           " 시장을 더 분석해줘 (경쟁도, CPC, 인구당 검색량 포함)";
@@ -155,6 +196,14 @@
 
   function renderLegend(){
     legend.innerHTML = "";
+    if(mode==="trend"){
+      var g = TRENDS && TRENDS.global && TRENDS.global[horizon] && TRENDS.global[horizon].points;
+      legend.innerHTML =
+        '<span class="lg">worldwide (live)</span>' +
+        '<span class="lg" style="width:130px;display:inline-block">' + (g ? spark(g, true) : '<span class="demonote">run collector/trends.py</span>') + '</span>' +
+        '<span class="lg demonote">dashed = synthetic per-country demo</span>';
+      return;
+    }
     if(mode==="cont"){
       CONTS.forEach(function(k){
         if(!DATA.some(function(d){return d.continent===k;})) return;
@@ -173,14 +222,25 @@
 
   function setMode(m){
     mode = m;
-    [["cont","m-cont"],["vol","m-vol"],["chg","m-chg"]].forEach(function(pair){
+    [["cont","m-cont"],["trend","m-trend"],["chg","m-chg"]].forEach(function(pair){
       document.getElementById(pair[1]).classList.toggle("on", pair[0]===m);
     });
     render();
   }
   document.getElementById('m-cont').onclick=function(){setMode("cont");};
-  document.getElementById('m-vol').onclick=function(){setMode("vol");};
+  document.getElementById('m-trend').onclick=function(){setMode("trend");};
   document.getElementById('m-chg').onclick=function(){setMode("chg");};
+
+  function setHorizon(hz){
+    horizon = hz;
+    ["1d","1w","1m","3m","1y"].forEach(function(k){
+      document.getElementById("h-"+k).classList.toggle("on", k===hz);
+    });
+    render();
+  }
+  ["1d","1w","1m","3m","1y"].forEach(function(k){
+    document.getElementById("h-"+k).onclick=function(){setHorizon(k);};
+  });
 
   // Selection is a DISPLAY filter over the cached pool — no SerpApi call.
   // If meta.selected_countries is set, show exactly those; otherwise show the
@@ -210,8 +270,16 @@
       " · source " + (META.source||"—");
   }
 
+  function loadTrends(){
+    return fetch('../data/trends.json?ts=' + Date.now())
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(t){ TRENDS = t; if(mode==="trend") render(); })
+      .catch(function(){ TRENDS = null; });
+  }
+
   function load(){
     errEl.hidden = true;
+    loadTrends();
     return fetch('../data/data.json?ts=' + Date.now())
       .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
       .then(function(doc){
@@ -241,6 +309,7 @@
     });
   };
 
+  if(location.hash === "#trend"){ setMode("trend"); }
   load();
 })();
 </script>
