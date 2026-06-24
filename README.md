@@ -88,6 +88,9 @@ cp data/data.sample.json data/data.json
 0 6 * * * cd /path/to/mmm_project && /usr/bin/python -m collector.fetch_data >> collect.log 2>&1
 ```
 
+See [`crontab.example`](crontab.example) for the full version (Windows Task
+Scheduler note + the manual-refresh path `python -m collector.admin refresh`).
+
 ### Connect the MCP server
 
 ```bash

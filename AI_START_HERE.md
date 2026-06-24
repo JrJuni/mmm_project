@@ -79,7 +79,7 @@ python -m pip install -r requirements.txt
 cp .env.example .env
 # edit .env, set SERPAPI_KEY
 
-# 4. first collection (loads .env if you use a loader, or export the var)
+# 4. first collection (.env is loaded automatically; a real env var still wins)
 python -m collector.fetch_data
 
 # 5. open the grid
@@ -93,7 +93,9 @@ to `data/data.json` — useful for a no-cost product-shape check.
 
 ### Schedule collection
 
-Daily refresh keeps 1 keyword within the free budget. Example cron:
+Daily refresh keeps 1 keyword within the free budget. Example cron (see
+`crontab.example` for the full version with Windows Task Scheduler + manual
+refresh notes):
 
 ```cron
 0 6 * * * cd /path/to/mmm_project && /usr/bin/python -m collector.fetch_data >> collect.log 2>&1
@@ -108,6 +110,20 @@ python -m mcp_server.server
 ```
 
 After connecting, ask the assistant to run `config_doctor` first.
+
+### Changing the keyword or which countries show (dev/admin)
+
+These are developer actions via the CLI `collector/admin.py` — never MCP:
+
+```bash
+python -m collector.admin set-keyword "YourBrand"   # then run: refresh
+python -m collector.admin select US KR JP           # show exactly these
+python -m collector.admin clear-select              # back to the default view
+```
+
+The grid defaults to the 12 largest economies. Collection changes (keyword/geo)
+re-fetch; selection changes are display-only and cost no quota. See
+`docs/tool-surfaces.md`.
 
 ## First useful questions
 
