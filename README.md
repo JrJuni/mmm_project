@@ -163,6 +163,28 @@ Swap the data source at one function — `fetch_interest_by_country()` in
 
 Nothing downstream changes for an index-based swap.
 
+## Which countries are shown
+
+The collector stores **every** country Google Trends returns (~100+) as a pool
+in `data/data.json`. The grid shows the top `display_n` (default 12) by interest,
+or an explicit `selected_countries` list if set. Picking countries is a *display*
+filter over the cached pool — it never calls SerpApi, so a rising market is
+already in the cache and just needs to be shown.
+
+Changing collection (the keyword, geo, cadence) or the selection is done with the
+developer admin CLI — a terminal tool, deliberately **not** an MCP tool, so it
+stays off the read-only surface:
+
+```bash
+python -m collector.admin show
+python -m collector.admin select US KR JP AE   # show exactly these
+python -m collector.admin clear-select         # back to top display_n
+python -m collector.admin set-keyword "YourBrand"
+python -m collector.admin refresh              # run a live collection now
+```
+
+It writes a gitignored `dev_overrides.json` that overrides the shipped defaults.
+
 ## FAQ
 
 **Why is the tile size all the same?** Sizing tiles by a 0-100 relative index

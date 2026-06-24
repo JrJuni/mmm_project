@@ -123,7 +123,9 @@ def build_records(
             }
         )
     records.sort(key=lambda r: r["interest"], reverse=True)
-    return records[: cfg.top_n]
+    if cfg.top_n is not None:
+        records = records[: cfg.top_n]
+    return records
 
 
 def collect(cfg: CollectorConfig = DEFAULT_CONFIG) -> dict[str, Any]:
@@ -166,6 +168,10 @@ def collect(cfg: CollectorConfig = DEFAULT_CONFIG) -> dict[str, Any]:
             "source": "serpapi:google_trends:GEO_MAP_0",
             "periods": cfg.periods_per_keyword,
             "country_count": len(records),
+            # Display hints consumed by the static grid (and future read-only
+            # lookup). Selection filters this cached pool; it never re-fetches.
+            "display_n": cfg.display_n,
+            "selected_countries": cfg.selected_countries or [],
         },
         "countries": records,
     }

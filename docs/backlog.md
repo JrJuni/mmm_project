@@ -50,6 +50,31 @@ P1 runtime verification ran against the real SerpApi free tier (per plan
   `continent: "Unknown"` (e.g. TN=Tunisia, MU=Mauritius missing from
   `collector/countries.py`). Widen the mapping — see Stream B.
 
+## Shipped — country selection + dev admin surface (2026-06-24)
+
+Goal: let a non-developer react to a newly-rising market without editing code or
+re-collecting, while keeping the MCP surface read-only.
+
+- **Cache is now the full pool.** `config.top_n` defaults to `None` (keep every
+  country SerpApi returns; a live run stored 111). One call returns all
+  countries, so the bigger pool costs no extra quota.
+- **Selection is a display filter, not collection.** New config knobs
+  `display_n` (grid default, 12) and `selected_countries` (ISO codes). The grid
+  renders the selection if set, else the top `display_n`. `meta.display_n` and
+  `meta.selected_countries` are written into `data.json` for the static grid.
+  Filtering never calls SerpApi.
+- **Dev admin CLI `collector/admin.py`** — the hidden control surface. Can set
+  keyword/geo/top_n/display_n/selection and trigger a refresh, via a gitignored
+  `dev_overrides.json` that `config.load_config()` merges over shipped defaults.
+  It is a terminal CLI, **not** an MCP tool, so it cannot be reached by the model
+  (preserves the read-only invariant). See `docs/security.md`.
+- **Operational model (target):** read-only separation stays the production
+  shape — collection is admin-gated; "which countries to view" is self-serve
+  (UI selection now; a read-only `find_market(name)` MCP lookup later).
+
+Deferred (next): UI checkbox/search to drive `selected_countries` live in the
+grid; a "biggest movers" view; the read-only `find_market` MCP lookup tool.
+
 ## Current active streams
 
 ### Stream A — SerpApi free-tier policy (confirmed, low risk)
@@ -84,9 +109,8 @@ Goal: make the daily collection runnable and observably within budget.
       last-`updated_at` staleness clearly.
 - [ ] Decide staleness policy: how old is `data.json` allowed to get before the
       grid/MCP flag it (Trends is weekly-ish, so ~2-3 days is fine).
-- [ ] Widen `collector/countries.py` continent mapping — live run showed 6/12
-      countries as `Unknown` (TN, MU, etc.). Affects `get_continent_summary`
-      and the grid's continent color mode.
+- [x] Widen `collector/countries.py` continent mapping — done 2026-06-24. Now a
+      broad world map; a live 111-country pull mapped 111/111 (was 6/12 Unknown).
 
 ### Stream C — Docs & release maturation
 

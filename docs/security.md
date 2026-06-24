@@ -49,9 +49,21 @@ cache. Therefore:
 - A user mashing the UI refresh button costs zero SerpApi quota.
 - Billable usage is bounded by cron cadence, not by call patterns.
 
-Do not add a refresh/collect tool to the MCP surface. On-demand refresh, if
-needed, is a private admin action (run `collector/fetch_data.py` directly), not
-a public tool.
+Do not add a refresh/collect tool to the MCP surface. On-demand refresh and all
+configuration changes (keyword, geo, cache pool, country selection) are private
+admin actions, exposed only through the developer CLI `collector/admin.py` (run
+directly in a terminal; it writes a gitignored `dev_overrides.json`). That CLI
+is the project's *hidden* control surface: it can mutate everything and trigger
+collection, but because it is a plain CLI it is structurally unreachable by the
+model or by untrusted content. Keep it that way — never expose `admin.py`'s
+operations over MCP, and never wire them to untrusted input. Doing so would add
+back the write/refresh channel this design removes.
+
+Note on display vs collection: choosing which countries to *show*
+(`selected_countries`, `display_n`) filters the already-cached pool and triggers
+no SerpApi call, so a read-only selection capability (UI or a future read-only
+lookup tool) does not reopen the cost channel. Only *collection* changes
+(keyword/geo/cadence) are admin-gated.
 
 ## Secrets
 

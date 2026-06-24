@@ -102,7 +102,7 @@
   };
   var CONTS = ["N. America","Asia","Europe","Oceania","S. America","M. East","Africa"];
   var cssv = function(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
-  var mode = "cont", DATA = [], META = {};
+  var mode = "cont", DATA = [], POOL = [], META = {};
   var grid = document.getElementById('grid'),
       legend = document.getElementById('legend'),
       errEl = document.getElementById('err');
@@ -182,12 +182,27 @@
   document.getElementById('m-vol').onclick=function(){setMode("vol");};
   document.getElementById('m-chg').onclick=function(){setMode("chg");};
 
+  // Selection is a DISPLAY filter over the cached pool — no SerpApi call.
+  // If meta.selected_countries is set, show exactly those; otherwise show the
+  // top `display_n` (the pool is already sorted by interest desc).
+  function applySelection(){
+    var sel = (META.selected_countries || []).map(function(c){ return String(c).toUpperCase(); });
+    if(sel.length){
+      var byCode = {};
+      POOL.forEach(function(d){ byCode[d.country_code] = d; });
+      DATA = sel.map(function(c){ return byCode[c]; }).filter(Boolean);
+    } else {
+      DATA = POOL.slice(0, META.display_n || 12);
+    }
+  }
+
   function fmtMeta(){
     var when = META.updated_at ? new Date(META.updated_at).toLocaleString() : "unknown";
     document.getElementById('kw').textContent = "keyword: " + (META.keyword||"—");
     document.getElementById('meta').textContent =
-      (META.geo||"worldwide") + " · " + (META.country_count||DATA.length) +
-      " countries · updated " + when + " · source " + (META.source||"—");
+      (META.geo||"worldwide") + " · showing " + DATA.length + " of " +
+      (POOL.length || DATA.length) + " countries · updated " + when +
+      " · source " + (META.source||"—");
   }
 
   function load(){
@@ -195,8 +210,9 @@
     return fetch('data/data.json?ts=' + Date.now())
       .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
       .then(function(doc){
-        DATA = doc.countries || [];
+        POOL = doc.countries || [];
         META = doc.meta || {};
+        applySelection();
         fmtMeta(); render();
       })
       .catch(function(e){

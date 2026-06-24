@@ -32,8 +32,13 @@
 | `collector/config.py` | `DEFAULT_CONFIG` | env (`SERPAPI_KEY`) | typed config, quota math | none |
 | `collector/countries.py` | `continent_for()` | country code | continent label | none |
 | `collector/fetch_data.py` | `main()` | SerpApi | `data/data.json` (atomic) | network, file write |
+| `collector/admin.py` | `main()` (CLI) | `dev_overrides.json` | config overrides, live refresh | file write; can trigger collection — **DEV ONLY, never an MCP tool** |
 | `web/index.html` | browser load | `data/data.json` | rendered grid | none |
 | `mcp_server/server.py` | `mcp.run()` | `data/data.json` | tool results | none (read-only) |
+
+`collector/config.py` builds `DEFAULT_CONFIG` via `load_config()`, which merges a
+gitignored `dev_overrides.json` (written only by the admin CLI) over the shipped
+defaults. The MCP server and UI never read or write overrides.
 
 ## Data contract: `data/data.json`
 
@@ -45,7 +50,9 @@
     "updated_at": "ISO-8601 UTC",
     "source": "serpapi:google_trends:GEO_MAP_0",
     "periods": 2,
-    "country_count": 12
+    "country_count": 111,
+    "display_n": 12,
+    "selected_countries": []
   },
   "countries": [
     {
@@ -62,7 +69,15 @@
 - `interest` / `prev_interest`: Google Trends 0-100 relative index (NOT absolute
   search volume). `change_pct` is computed from the two periods; `null` when
   `prev_interest` is 0 (avoids divide-by-zero, mirrors Trends "breakout").
-- `countries` is pre-sorted by `interest` desc and trimmed to `top_n`.
+- `countries` is the **pool**: every country SerpApi returns (~100+), pre-sorted
+  by `interest` desc. `top_n` (config, default `None` = keep all) caps the pool.
+  One GEO_MAP_0 call already returns all countries, so a full pool costs no extra
+  quota — it just keeps a newly-rising market available without re-collecting.
+- **Display vs collection.** Which countries are *shown* is a display concern,
+  not a collection one. The grid (and any future read-only lookup) renders
+  `selected_countries` if set, else the top `display_n` of the pool. Changing the
+  selection never calls SerpApi. Only changing the keyword/geo/cadence is a
+  collection change, done via the dev admin CLI (below), never over MCP.
 
 ## The adapter seam
 

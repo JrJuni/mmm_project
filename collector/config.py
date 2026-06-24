@@ -10,8 +10,9 @@ environment at runtime. See `.env.example`.
 
 from __future__ import annotations
 
+import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -31,8 +32,21 @@ class CollectorConfig:
     # signal would otherwise collapse to zero in most countries.
     include_low_search_volume: bool = True
 
-    # How many top countries to keep in the cache / show in the grid.
-    top_n: int = 12
+    # How many countries to KEEP IN THE CACHE (the pool available for display
+    # and lookup). None = keep every country SerpApi returns (~100+). One call
+    # already returns all countries, so a larger pool costs no extra quota — it
+    # just makes a newly-rising market available without re-collecting.
+    top_n: int | None = None
+
+    # Grid DISPLAY default: how many of the pool to show when no explicit
+    # selection is set. Selecting/searching countries is a display concern, not
+    # a collection one (see `selected_countries`).
+    display_n: int = 12
+
+    # Optional display selection (ISO alpha-2 codes). When set, the grid and any
+    # future read-only lookup show exactly these instead of the top `display_n`.
+    # This filters the cached pool — it never triggers a SerpApi call.
+    selected_countries: list[str] | None = None
 
     # --- Cost control ----------------------------------------------------
     # Two periods (current 7d + previous 7d) are needed to compute change.
@@ -133,4 +147,36 @@ def serpapi_key() -> str | None:
 # without any manual export. A real environment variable still takes priority.
 _load_dotenv()
 
-DEFAULT_CONFIG = CollectorConfig()
+
+# --------------------------------------------------------------------------
+# Dev/admin overrides. The shipped defaults above are never edited at runtime;
+# instead the dev admin CLI (`collector/admin.py`) writes a gitignored
+# `dev_overrides.json` at the repo root. This is a DEVELOPER surface only — it
+# is NOT exposed over MCP and must never be reachable from untrusted input.
+# Keeping mutation out of the MCP server is what preserves the read-only
+# invariant (no cost channel, no exfiltration channel). See docs/security.md.
+# --------------------------------------------------------------------------
+DEV_OVERRIDES_PATH = Path(__file__).resolve().parent.parent / "dev_overrides.json"
+
+
+def load_config(path: Path | None = None) -> CollectorConfig:
+    """Build the effective config: shipped defaults + optional dev overrides.
+
+    Reads `dev_overrides.json` (a flat JSON object of CollectorConfig field
+    names) if present. Unknown keys are ignored; a missing or malformed file
+    falls back to pure defaults. Never raises.
+    """
+    path = path or DEV_OVERRIDES_PATH
+    valid = {f.name for f in fields(CollectorConfig)}
+    overrides: dict = {}
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            raw = json.load(handle)
+        if isinstance(raw, dict):
+            overrides = {k: v for k, v in raw.items() if k in valid}
+    except (FileNotFoundError, OSError, json.JSONDecodeError):
+        overrides = {}
+    return CollectorConfig(**overrides)
+
+
+DEFAULT_CONFIG = load_config()
