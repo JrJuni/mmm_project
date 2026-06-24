@@ -68,7 +68,7 @@
   .demonote{font-size:12px; color:var(--hint); font-style:italic;}
   .tile.demo{border-style:dashed;}
   .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
-  .spark-cap{font-size:10px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
+  .spark-axis{display:flex; justify-content:space-between; font-size:9px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -163,6 +163,21 @@
     if(!g || !g.start_ts || !g.end_ts) return SPAN[hz] || hz;
     return fmtTs(g.start_ts, hz) + " – " + fmtTs(g.end_ts, hz);
   }
+  function tickLabel(ts, hz){
+    if(!ts) return "";
+    var d = new Date(ts*1000);
+    if(hz==="1d") return d.getHours()+":00";
+    if(hz==="1y") return (d.getMonth()+1)+"/'"+String(d.getFullYear()).slice(2);
+    return (d.getMonth()+1)+"/"+d.getDate();
+  }
+  // x-axis ticks (start / mid / end) so a position maps to a real date/time.
+  function axisRow(g, hz){
+    if(!g || !g.start_ts || !g.end_ts) return '';
+    var mid = Math.round((g.start_ts + g.end_ts) / 2);
+    return '<div class="spark-axis"><span>'+tickLabel(g.start_ts,hz)+'</span>'+
+           '<span>'+tickLabel(mid,hz)+'</span>'+
+           '<span>'+tickLabel(g.end_ts,hz)+'</span></div>';
+  }
 
   function render(){
     grid.innerHTML = "";
@@ -181,8 +196,7 @@
         el.innerHTML =
           '<div><div class="name">'+d.country_code+'</div>'+
           '<div class="sub">'+sub+'</div></div>'+
-          (series ? spark(series, false) +
-              '<div class="spark-cap">last '+SPAN[horizon]+' · '+last+'/100</div>'
+          (series ? spark(series, false) + axisRow(gblk, horizon)
                   : '<div class="val" style="opacity:.5">no data</div>');
       } else {
         var bg = "transparent", val = "";
@@ -328,7 +342,11 @@
     });
   };
 
-  if(location.hash === "#trend"){ setMode("trend"); }
+  if(location.hash.indexOf("#trend") === 0){
+    setMode("trend");
+    var hz = location.hash.split("/")[1];
+    if(hz && SPAN[hz]) setHorizon(hz);
+  }
   load();
 })();
 </script>
