@@ -39,12 +39,14 @@ class CollectorConfig:
     # Set to 1 to track current interest only and halve quota usage.
     periods_per_keyword: int = 2
 
-    # Conservative free-tier ceiling. SerpApi advertises a forever-free plan;
-    # recent sources cite 100 searches/month. We budget against 100.
-    monthly_quota_budget: int = 100
+    # Free-tier ceiling. SerpApi's pricing page lists the free plan at 250
+    # searches/month (recurring) with 50/hour throughput, confirmed against the
+    # live pricing page and a real account dashboard on 2026-06-24. Usage stays
+    # far under this (~60/month), leaving room to add keywords later.
+    monthly_quota_budget: int = 250
 
     # Refresh cadence target. Daily (1/day) keeps 1 keyword * 2 periods within
-    # the 100/month budget (~60/month). Do NOT lower below the rate the data
+    # the 250/month budget (~60/month). Do NOT lower below the rate the data
     # actually changes (Trends is weekly-ish; Keyword Planner is monthly).
     refreshes_per_day: int = 1
 

@@ -22,10 +22,11 @@ extension — not the core build, which is done.
 - **Invariants holding:** only the collector calls SerpApi; MCP + UI read the
   cache; no write/refresh/send tools; field-whitelist sanitization;
   secrets from env only. See `docs/architecture.md`, `docs/security.md`.
-- **Quota policy encoded in `config.py`:** budget = 100 searches/month
-  (conservative free-tier ceiling, revised down from older 250 figure);
+- **Quota policy encoded in `config.py`:** budget = 250 searches/month
+  (SerpApi free plan, confirmed on the live pricing page + a real account
+  dashboard 2026-06-24; 50/hour throughput. The earlier "100" was stale data);
   1 keyword x 2 periods x 1 refresh/day x 30 = ~60/month, within budget with
-  ~40 headroom. Cadence = **1/day (24h cron)**, not 12h.
+  ~190 headroom. Cadence = **1/day (24h cron)**, not 12h.
 - **Git:** connected to `github.com/JrJuni/mmm_project` (public, MIT),
   `main` pushed. `.env` and `data/data.json` gitignored;
   `data/data.sample.json` shipped.
@@ -55,16 +56,21 @@ P1 runtime verification ran against the real SerpApi free tier (per plan
 
 Goal: lock in cost/legal assumptions so cadence and release messaging are honest.
 
-- [x] Free tier ~100 searches/month (budget against 100, not 250).
-- [x] Commercial use allowed for internal MMM / target-market monitoring
-      ("own product" use); reselling raw SERP data to third parties is not.
-- [x] Caching / storing results in `data.json` is allowed (SerpApi itself
-      caches identical requests for ~1h). Do not redistribute raw data.
-- [ ] Note in README: U.S. Legal Shield is Production-tier only, NOT on
-      free/starter. Internal use of public search stats = low practical risk;
-      revisit only if scaling up or exposing data to an external service.
-- [ ] Re-confirm the 100/mo figure against SerpApi's live pricing page before
-      public release (sources disagree 100 vs 250; we stay conservative).
+- [x] Free tier = 250 searches/month, 50/hour throughput (confirmed on live
+      pricing page + account dashboard 2026-06-24; earlier "100/20" was stale).
+      `config.monthly_quota_budget` set to 250.
+- [x] Commercial use: no clause restricts the free plan to non-commercial use
+      (only free-tier exclusion is the Legal Shield). Internal/product use of the
+      data is permitted; reselling raw SERP data to third parties is not
+      (Terms Section 2).
+- [x] Caching / storing results in `data.json` is allowed (no storage-duration
+      clause; SerpApi itself caches identical requests for ~1h). No raw-data
+      redistribution.
+- [x] U.S. Legal Shield NOT on free/starter/developer (covers lawful collection
+      only, up to $2M, not data use). Documented in README free-tier terms.
+      Internal use of public stats = low risk; revisit if scaling/external.
+- [x] 100-vs-250 resolved: 250/month recurring per the live pricing page and a
+      real dashboard. README + README_ko + CLAUDE/AGENTS/AI_START_HERE updated.
 
 ### Stream B — Operational setup
 
@@ -102,7 +108,7 @@ release-ready. (Reuse assessment in progress; see "Docs to port" below.)
 
 Goal: capture so they are not re-derived later. Mind the quota math on each.
 
-- [ ] Keyword expansion (brand + category) — recompute quota; if >100/mo,
+- [ ] Keyword expansion (brand + category) — recompute quota; if >250/mo,
       consider $25 Starter or drop a period. Each keyword x periods x cadence.
 - [ ] Absolute-volume swap at the adapter seam (Glimpse / Keyword Planner /
       DataForSEO) — changes field semantics from 0-100 index to volume; better

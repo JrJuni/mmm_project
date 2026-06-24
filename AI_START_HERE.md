@@ -43,7 +43,7 @@ would create the cost and exfiltration channels this design deliberately avoids.
 Explain the pieces in plain language before any commands:
 
 - A SerpApi account and free-tier API key (1 keyword / daily refresh fits the
-  ~100 searches/month free budget).
+  250 searches/month free budget).
 - Python 3.11+ to run the collector and the MCP server.
 - An MCP client (Claude Desktop, Codex/ChatGPT) to use the read tools.
 
@@ -131,7 +131,8 @@ All tools are read-only. Prefer the most specific:
 
 ## Cost & quota notes
 
-- Free tier budget assumed: ~100 successful searches/month (conservative).
+- Free tier budget: 250 successful searches/month (SerpApi free plan, confirmed
+  2026-06-24; 50/hour throughput).
 - 1 keyword x 2 periods (current/previous week) x 1 refresh/day x 30 = ~60/month.
 - Raising keyword count or refresh frequency is what pushes past the free tier.
   See `collector/config.py` (`projected_monthly_calls`, `within_budget`).

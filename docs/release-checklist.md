@@ -30,8 +30,8 @@ Status legend: `[x]` confirmed in repo today · `[ ]` to verify at release time.
 
 ## Gate 2 — Cost / quota (the cost firewall)
 
-- [x] `config.py`: budget = 100/month; 1 kw x 2 periods x 1 refresh/day x 30
-      = ~60/month; `within_budget()` is True with ~40 headroom.
+- [x] `config.py`: budget = 250/month; 1 kw x 2 periods x 1 refresh/day x 30
+      = ~60/month; `within_budget()` is True with ~190 headroom.
 - [ ] `within_budget()` is True for the shipped default config.
 - [ ] Cadence is **1/day (24h)**, not 12h. `crontab.example` reflects this
       (Stream B — may ship in this release or the next).
@@ -51,16 +51,16 @@ Status legend: `[x]` confirmed in repo today · `[ ]` to verify at release time.
 
 ## Gate 4 — Docs honesty
 
-- [ ] README states the free-tier reality plainly: ~100 searches/month cap,
-      commercial/internal use allowed, **no reselling raw SERP data**, and
-      **no U.S. Legal Shield on free/starter** (low practical risk for internal
-      use of public stats). Include the quota-math formula and how adding a
-      keyword changes it.
+- [x] README states the free-tier reality plainly: 250 searches/month cap
+      (50/hour), commercial/internal use allowed, **no reselling raw SERP
+      data**, caching allowed, and **no U.S. Legal Shield on free/starter/
+      developer**. "Free-tier terms (SerpApi)" section added to README +
+      README_ko, with the quota-math formula.
 - [ ] `.env` per-user key alias recommendation present (blast-radius limiting).
 - [ ] `AI_START_HERE.md`, `docs/architecture.md`, `docs/security.md`,
       `docs/backlog.md` reflect the shipped state.
-- [ ] Re-confirm the 100-vs-250 free-tier figure against SerpApi's live pricing
-      page; stay conservative (budget against the lower number).
+- [x] 100-vs-250 resolved: free plan is 250/month recurring (live pricing page +
+      account dashboard, 2026-06-24). `config.monthly_quota_budget` = 250.
 
 ## Gate 5 — Repo hygiene
 

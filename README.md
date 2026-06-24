@@ -121,12 +121,36 @@ concentrated?"
 ```
 monthly calls = keywords x periods x refreshes_per_day x 30
 default       = 1        x 2       x 1                 x 30 = ~60
-free budget   = ~100 successful searches/month (conservative)
+free budget   = 250 successful searches/month (SerpApi free plan)
 ```
 
 What pushes you past the free tier: more keywords, or more frequent refresh.
 The UI refresh button and all MCP calls are free. Tune in
 `collector/config.py` (`projected_monthly_calls`, `within_budget`).
+
+## Free-tier terms (SerpApi)
+
+This project assumes SerpApi's free plan: **250 searches/month** (recurring) and
+**50 searches/hour** throughput, per the [pricing page](https://serpapi.com/pricing)
+(confirmed 2026-06-24). Always re-check the current terms yourself before relying
+on them. See also [SerpApi's Terms](https://serpapi.com/legal).
+
+- **Commercial use:** SerpApi's terms have no clause restricting the free plan
+  to non-commercial use — the only free-tier-specific exclusion is the Legal
+  Shield (below). Internal/product use of the returned data is permitted. If
+  commercial certainty matters, confirm with `support@serpapi.com`.
+- **No reselling raw data:** You may use the data inside your own product, but
+  the terms (Section 2) prohibit reselling or redistributing the raw search
+  results to third parties. This project never sends raw data outward — the MCP
+  server is read-only and returns only sanitized, structured fields.
+- **Caching is fine:** Storing results in `data/data.json` is allowed; the terms
+  set no storage-duration limit. (Separately, SerpApi caches identical queries
+  server-side for ~1h, billed as free.)
+- **No Legal Shield on free/starter/developer:** SerpApi's up-to-$2M legal
+  protection for lawful data *collection* (scraping/parsing of public data)
+  applies only to higher paid plans, not the free tier, and never covers how the
+  data is *used*. Low practical risk for internal use of public, aggregate
+  search statistics; revisit before scaling or exposing data externally.
 
 ## Customization
 

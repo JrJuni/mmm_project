@@ -67,7 +67,8 @@ There are intentionally NO write, refresh, or send tools. See Architecture rules
 
 ## Cost rules
 
-- Free-tier budget assumed: ~100 successful searches/month.
+- Free-tier budget: 250 successful searches/month (SerpApi free plan, confirmed
+  2026-06-24; 50/hour throughput).
 - Projected usage = keywords x periods x refreshes_per_day x 30. Keep it under
   budget in `collector/config.py`.
 - The collector warns (does not hard-fail) when over budget; the real ceiling is

@@ -5,6 +5,18 @@ not repeating. Format: **Date / Tried / Result / Lesson / Related**.
 
 ---
 
+## 2026-06-24 — Verify quota numbers against the live pricing page
+
+- **Tried:** Budgeted the collector against "~100 searches/month", taken from a
+  pasted AI research summary; flagged 100-vs-250 as uncertain.
+- **Result:** The real SerpApi free plan is **250 searches/month, 50/hour**,
+  confirmed on the live [pricing page](https://serpapi.com/pricing) and the
+  user's own account dashboard. The "100" (and a "20/hour") figures were stale.
+- **Lesson:** For cost-bearing limits, confirm against the vendor's live pricing
+  page (and the actual dashboard) before encoding them — secondary summaries
+  drift. Set `config.monthly_quota_budget` from the verified number (now 250).
+- **Related:** `collector/config.py`, README "Free-tier terms (SerpApi)".
+
 ## 2026-06-24 — SerpApi `now 14-d` is not a valid date
 
 - **Tried:** First live collector run with the shipped default config
