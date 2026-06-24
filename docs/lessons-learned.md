@@ -5,6 +5,21 @@ not repeating. Format: **Date / Tried / Result / Lesson / Related**.
 
 ---
 
+## 2026-06-24 — Test the grid at its real served URL, not just the file
+
+- **Tried:** The Python checks simulated the grid's display logic against the
+  `data/data.json` file directly, and all passed.
+- **Result:** Rendering the page the documented way
+  (`python -m http.server` at repo root, open `/web/index.html`) showed nothing:
+  the relative `fetch('data/data.json')` resolved to `/web/data/data.json`
+  (404). The cache lives at `/data/data.json`. Confirmed with a headless Edge
+  screenshot.
+- **Lesson:** Simulating the data path in Python does not exercise browser URL
+  resolution. For a static page that `fetch()`es a sibling directory, test the
+  actual served URL. Fixed to `../data/data.json`; a headless screenshot is a
+  cheap way to verify the real render.
+- **Related:** `web/index.html` (fetch path), `AI_START_HERE.md` (serving note).
+
 ## 2026-06-24 — Verify quota numbers against the live pricing page
 
 - **Tried:** Budgeted the collector against "~100 searches/month", taken from a

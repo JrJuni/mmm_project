@@ -212,7 +212,7 @@
 
   function load(){
     errEl.hidden = true;
-    return fetch('data/data.json?ts=' + Date.now())
+    return fetch('../data/data.json?ts=' + Date.now())
       .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
       .then(function(doc){
         POOL = doc.countries || [];
@@ -222,8 +222,9 @@
       })
       .catch(function(e){
         errEl.hidden = false;
-        errEl.textContent = "Could not load data/data.json (" + e.message +
-          "). Run the collector or serve this folder over http.";
+        errEl.textContent = "Could not load the cache (" + e.message +
+          "). Run the collector, then serve the repo root over http and open " +
+          "/web/index.html.";
       });
   }
 

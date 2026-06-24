@@ -83,7 +83,7 @@ cp .env.example .env
 python -m collector.fetch_data
 
 # 5. open the grid
-#    serve the repo root over http so fetch('data/data.json') works, e.g.:
+#    serve the repo root over http so the grid can fetch ../data/data.json, e.g.:
 python -m http.server 8000
 # then open http://localhost:8000/web/index.html
 ```
