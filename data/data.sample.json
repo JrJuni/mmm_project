@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "keyword": "Arencia",
+    "geo": "worldwide",
+    "updated_at": "2026-06-24T09:11:50.078505+00:00",
+    "source": "sample",
+    "periods": 2,
+    "country_count": 12
+  },
+  "countries": [
+    {
+      "country_code": "US",
+      "continent": "N. America",
+      "interest": 87,
+      "prev_interest": 72,
+      "change_pct": 21
+    },
+    {
+      "country_code": "JP",
+      "continent": "Asia",
+      "interest": 62,
+      "prev_interest": 69,
+      "change_pct": -10
+    },
+    {
+      "country_code": "KR",
+      "continent": "Asia",
+      "interest": 58,
+      "prev_interest": 42,
+      "change_pct": 38
+    },
+    {
+      "country_code": "DE",
+      "continent": "Europe",
+      "interest": 44,
+      "prev_interest": 43,
+      "change_pct": 2
+    },
+    {
+      "country_code": "GB",
+      "continent": "Europe",
+      "interest": 40,
+      "prev_interest": 35,
+      "change_pct": 14
+    },
+    {
+      "country_code": "FR",
+      "continent": "Europe",
+      "interest": 29,
+      "prev_interest": 31,
+      "change_pct": -6
+    },
+    {
+      "country_code": "CA",
+      "continent": "N. America",
+      "interest": 26,
+      "prev_interest": 22,
+      "change_pct": 18
+    },
+    {
+      "country_code": "AU",
+      "continent": "Oceania",
+      "interest": 21,
+      "prev_interest": 18,
+      "change_pct": 17
+    },
+    {
+      "country_code": "BR",
+      "continent": "S. America",
+      "interest": 18,
+      "prev_interest": 13,
+      "change_pct": 38
+    },
+    {
+      "country_code": "SG",
+      "continent": "Asia",
+      "interest": 15,
+      "prev_interest": 14,
+      "change_pct": 7
+    },
+    {
+      "country_code": "AE",
+      "continent": "M. East",
+      "interest": 12,
+      "prev_interest": 8,
+      "change_pct": 50
+    },
+    {
+      "country_code": "MX",
+      "continent": "N. America",
+      "interest": 9,
+      "prev_interest": 11,
+      "change_pct": -18
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arencia · search demand by country</title>
+<style>
+  :root{
+    --bg:#ffffff; --fg:#1d1c1a; --muted:#6b6a64; --hint:#9a988f;
+    --border:rgba(0,0,0,0.12); --border2:rgba(0,0,0,0.22);
+    --radius:12px; --radius-sm:8px;
+    --blue:#0c447c; --blue-bg:#e6f1fb;
+    --purple:#3c3489; --purple-bg:#eeedfe;
+    --teal:#085041; --teal-bg:#e1f5ee;
+    --amber:#633806; --amber-bg:#faeeda;
+    --coral:#712b13; --coral-bg:#faece7;
+    --pink:#72243e; --pink-bg:#fbeaf0;
+    --green:#27500a; --green-bg:#eaf3de;
+    --gray:#444441; --gray-bg:#f1efe8;
+    --up:#639922; --down:#e24b4a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1f1e1c; --fg:#ecebe6; --muted:#a3a199; --hint:#7c7a72;
+      --border:rgba(255,255,255,0.14); --border2:rgba(255,255,255,0.26);
+    }
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:28px 20px; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    line-height:1.5; max-width:760px; margin-inline:auto;
+  }
+  header{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px;}
+  h1{font-size:20px; font-weight:500; margin:0;}
+  .kw{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); font-size:13px;}
+  .meta{font-size:12px; color:var(--hint); margin:2px 0 18px;}
+  .controls{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;}
+  .controls .label{font-size:13px; color:var(--muted); margin-right:2px;}
+  button{
+    font-size:13px; padding:6px 12px; border-radius:var(--radius-sm);
+    border:0.5px solid var(--border2); background:transparent; color:var(--muted);
+    cursor:pointer; font-family:inherit;
+  }
+  button.on{border-color:var(--fg); background:rgba(127,127,127,0.10); color:var(--fg); font-weight:500;}
+  button:disabled{opacity:0.5; cursor:default;}
+  .spacer{flex:1;}
+  #refresh{display:inline-flex; align-items:center; gap:6px;}
+  .grid{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;}
+  .tile{
+    border-radius:var(--radius); border:0.5px solid var(--border);
+    padding:12px 12px 14px; min-height:80px; cursor:pointer;
+    display:flex; flex-direction:column; justify-content:space-between;
+    transition:transform .08s;
+  }
+  .tile:hover{transform:translateY(-1px); border-color:var(--border2);}
+  .tile .name{font-size:14px; font-weight:500; line-height:1.2;}
+  .tile .sub{font-size:11px; margin-top:2px; opacity:.85;}
+  .tile .val{font-size:15px; font-weight:500; margin-top:8px;}
+  .legend{margin-top:12px; font-size:12px; color:var(--muted);
+    display:flex; gap:14px; flex-wrap:wrap; align-items:center;}
+  .lg{display:flex; align-items:center; gap:6px;}
+  .sw{width:12px; height:12px; border-radius:3px; display:inline-block;}
+  .foot{margin-top:16px; font-size:12px; color:var(--hint); line-height:1.6;}
+  .err{color:var(--down); font-size:13px; margin-top:12px;}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:11px;}
+</style>
+</head>
+<body>
+  <header>
+    <h1>Search demand by country</h1>
+    <span class="kw" id="kw">keyword: —</span>
+  </header>
+  <div class="meta" id="meta">loading cache…</div>
+
+  <div class="controls">
+    <span class="label">Shade by</span>
+    <button id="m-cont" class="on">Continent</button>
+    <button id="m-vol">Search interest</button>
+    <button id="m-chg">WoW change</button>
+    <span class="spacer"></span>
+    <button id="refresh"><span id="rtxt">Refresh</span></button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="legend" id="legend"></div>
+  <div class="err" id="err" hidden></div>
+
+  <p class="foot">
+    Reads <code>data/data.json</code> (cached). Refresh re-reads the cache; it does
+    not call SerpApi. Collection runs on a schedule via <code>collector/fetch_data.py</code>.
+    Tile click opens a per-country question in your assistant.
+  </p>
+
+<script>
+(function(){
+  var RAMP = {
+    "N. America":["--blue-bg","--blue"], "Asia":["--purple-bg","--purple"],
+    "Europe":["--teal-bg","--teal"], "Oceania":["--amber-bg","--amber"],
+    "S. America":["--coral-bg","--coral"], "M. East":["--pink-bg","--pink"],
+    "Africa":["--green-bg","--green"], "Unknown":["--gray-bg","--gray"]
+  };
+  var CONTS = ["N. America","Asia","Europe","Oceania","S. America","M. East","Africa"];
+  var cssv = function(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+  var mode = "cont", DATA = [], META = {};
+  var grid = document.getElementById('grid'),
+      legend = document.getElementById('legend'),
+      errEl = document.getElementById('err');
+
+  function maxInterest(){ return DATA.reduce(function(m,d){return Math.max(m,d.interest||0);},1); }
+
+  function volShade(v){
+    var t = (v||0)/maxInterest();
+    return "rgba(55,138,221,"+(0.10+t*0.40).toFixed(2)+")";
+  }
+  function chgShade(p){
+    if(p===null||p===undefined) return "rgba(127,127,127,0.12)";
+    var t = Math.min(Math.abs(p)/40,1);
+    return p>=0 ? "rgba(99,153,34,"+(0.10+t*0.45).toFixed(2)+")"
+               : "rgba(226,75,74,"+(0.10+t*0.45).toFixed(2)+")";
+  }
+
+  function render(){
+    grid.innerHTML = "";
+    DATA.forEach(function(d){
+      var el = document.createElement('div');
+      el.className = "tile";
+      var bg = "transparent", fg = cssv('--fg'), sub = d.continent, val = "";
+      var p = d.change_pct;
+      if(mode==="cont"){
+        var r = RAMP[d.continent] || RAMP.Unknown;
+        bg = cssv(r[0]); fg = cssv(r[1]);
+        val = d.interest;
+      } else if(mode==="vol"){
+        bg = volShade(d.interest); val = d.interest;
+      } else {
+        bg = chgShade(p);
+        val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
+      }
+      el.style.background = bg;
+      el.innerHTML =
+        '<div><div class="name" style="color:'+fg+'">'+d.country_code+'</div>'+
+        '<div class="sub" style="color:'+fg+'">'+sub+'</div></div>'+
+        '<div class="val" style="color:'+fg+'">'+val+'</div>';
+      el.onclick = function(){
+        var msg = "Arencia 검색 수요 관점에서 "+d.country_code+
+          " 시장을 더 분석해줘 (경쟁도, CPC, 인구당 검색량 포함)";
+        if (window.sendPrompt) { window.sendPrompt(msg); }
+        else { navigator.clipboard && navigator.clipboard.writeText(msg); }
+      };
+      grid.appendChild(el);
+    });
+    renderLegend();
+  }
+
+  function renderLegend(){
+    legend.innerHTML = "";
+    if(mode==="cont"){
+      CONTS.forEach(function(k){
+        if(!DATA.some(function(d){return d.continent===k;})) return;
+        legend.innerHTML += '<span class="lg"><span class="sw" style="background:'+cssv(RAMP[k][1])+'"></span>'+k+'</span>';
+      });
+    } else if(mode==="vol"){
+      legend.innerHTML =
+        '<span class="lg"><span class="sw" style="background:rgba(55,138,221,0.15)"></span>lower</span>'+
+        '<span class="lg"><span class="sw" style="background:rgba(55,138,221,0.5)"></span>higher interest</span>';
+    } else {
+      legend.innerHTML =
+        '<span class="lg"><span class="sw" style="background:rgba(226,75,74,0.45)"></span>declining</span>'+
+        '<span class="lg"><span class="sw" style="background:rgba(99,153,34,0.45)"></span>growing vs last week</span>';
+    }
+  }
+
+  function setMode(m){
+    mode = m;
+    [["cont","m-cont"],["vol","m-vol"],["chg","m-chg"]].forEach(function(pair){
+      document.getElementById(pair[1]).classList.toggle("on", pair[0]===m);
+    });
+    render();
+  }
+  document.getElementById('m-cont').onclick=function(){setMode("cont");};
+  document.getElementById('m-vol').onclick=function(){setMode("vol");};
+  document.getElementById('m-chg').onclick=function(){setMode("chg");};
+
+  function fmtMeta(){
+    var when = META.updated_at ? new Date(META.updated_at).toLocaleString() : "unknown";
+    document.getElementById('kw').textContent = "keyword: " + (META.keyword||"—");
+    document.getElementById('meta').textContent =
+      (META.geo||"worldwide") + " · " + (META.country_count||DATA.length) +
+      " countries · updated " + when + " · source " + (META.source||"—");
+  }
+
+  function load(){
+    errEl.hidden = true;
+    return fetch('data/data.json?ts=' + Date.now())
+      .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+      .then(function(doc){
+        DATA = doc.countries || [];
+        META = doc.meta || {};
+        fmtMeta(); render();
+      })
+      .catch(function(e){
+        errEl.hidden = false;
+        errEl.textContent = "Could not load data/data.json (" + e.message +
+          "). Run the collector or serve this folder over http.";
+      });
+  }
+
+  var rbtn = document.getElementById('refresh'), rtxt = document.getElementById('rtxt');
+  var cooling = false;
+  rbtn.onclick = function(){
+    if(cooling) return;
+    cooling = true; rbtn.disabled = true; rtxt.textContent = "Refreshing…";
+    load().finally(function(){
+      rtxt.textContent = "Refreshed";
+      setTimeout(function(){
+        rtxt.textContent = "Refresh"; rbtn.disabled = false; cooling = false;
+      }, 1500);
+    });
+  };
+
+  load();
+})();
+</script>
+</body>
+</html>

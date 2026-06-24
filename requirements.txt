@@ -1,0 +1,4 @@
+# Runtime dependencies for mmm-search-mcp.
+# The collector uses only the Python standard library (urllib, json) so it has
+# no third-party runtime deps. FastMCP is needed only to run the MCP server.
+fastmcp>=2.0
