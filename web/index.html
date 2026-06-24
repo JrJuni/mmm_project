@@ -97,16 +97,8 @@
     <button id="m-cont" class="on">Continent</button>
     <button id="m-trend">Trend index</button>
     <button id="m-chg">WoW change</button>
-    <button id="alert-cfg">⚙ Alerts</button>
     <span class="spacer"></span>
     <button id="refresh"><span id="rtxt">Refresh</span></button>
-  </div>
-
-  <div class="panel" id="alert-panel" hidden>
-    <span class="label">Alert when |WoW change| ≥</span>
-    <input id="alert-input" type="number" min="1" max="500" step="1" value="50"> %
-    <button id="alert-save">Save</button>
-    <span class="demonote">scans all markets; click a row to analyze</span>
   </div>
 
   <div class="controls" id="horizons" hidden>
@@ -122,6 +114,12 @@
   <div class="grid" id="grid"></div>
   <div class="legend" id="legend"></div>
   <div class="alog" id="alert-log" hidden></div>
+  <div class="panel" id="alert-panel" hidden>
+    <span class="label">Alert when |WoW change| ≥</span>
+    <input id="alert-input" type="number" min="1" max="500" step="1" value="50"> %
+    <button id="alert-save">Save</button>
+    <span class="demonote">scans all markets; click a row to analyze</span>
+  </div>
   <div class="err" id="err" hidden></div>
 
   <p class="foot">
@@ -386,6 +384,7 @@
     // Log panel — visible in WoW (chg) mode.
     var log = document.getElementById('alert-log');
     log.hidden = (mode !== 'chg');
+    if(mode !== 'chg') document.getElementById('alert-panel').hidden = true;
     var rows = list.length
       ? list.map(function(d){
           return '<div class="arow" data-c="' + d.country_code + '">' + arrow(d.change_pct) +
@@ -401,7 +400,7 @@
     }).join('');
     log.innerHTML =
       '<div class="alog-h">WoW alerts · ≥ ±' + ALERT_T + '% · ' + list.length + ' now' +
-      ' <button id="alert-cfg2">⚙ threshold</button></div>' + rows +
+      ' <button id="alert-cfg2">⚙ Alert</button></div>' + rows +
       (histRows ? '<div class="alog-sub">earlier snapshots</div>' + histRows : '');
     Array.prototype.forEach.call(log.querySelectorAll('.arow'), function(el){
       el.onclick = function(){
@@ -420,7 +419,6 @@
     if(!p.hidden) document.getElementById('alert-input').focus();
   }
   document.getElementById('alert-input').value = ALERT_T;
-  document.getElementById('alert-cfg').onclick = toggleAlertPanel;
   document.getElementById('alert-save').onclick = function(){
     var v = parseInt(document.getElementById('alert-input').value, 10);
     if(v > 0){ ALERT_T = v; localStorage.setItem('mmm_alert_threshold', String(v)); }
