@@ -150,15 +150,12 @@ def collect(cfg: CollectorConfig = DEFAULT_CONFIG) -> dict[str, Any]:
         )
 
     keyword = cfg.keywords[0]  # MVP tracks one primary keyword for the grid.
-    current = fetch_interest_by_country(
-        keyword, cfg.current_timeframe, cfg, api_key
-    )
+    current_tf, previous_tf = cfg.timeframes()
+    current = fetch_interest_by_country(keyword, current_tf, cfg, api_key)
     previous: dict[str, int] = {}
     if cfg.periods_per_keyword >= 2:
         time.sleep(1)  # be polite between calls
-        previous = fetch_interest_by_country(
-            keyword, cfg.previous_timeframe, cfg, api_key
-        )
+        previous = fetch_interest_by_country(keyword, previous_tf, cfg, api_key)
 
     records = build_records(current, previous, cfg)
     return {
