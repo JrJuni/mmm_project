@@ -198,10 +198,15 @@
 
   function fmtMeta(){
     var when = META.updated_at ? new Date(META.updated_at).toLocaleString() : "unknown";
+    var stale = "";
+    if(META.updated_at){
+      var hrs = (Date.now() - new Date(META.updated_at).getTime()) / 3600000;
+      if(hrs > (META.staleness_max_hours || 72)) stale = " · ⚠ STALE";
+    }
     document.getElementById('kw').textContent = "keyword: " + (META.keyword||"—");
     document.getElementById('meta').textContent =
       (META.geo||"worldwide") + " · showing " + DATA.length + " of " +
-      (POOL.length || DATA.length) + " countries · updated " + when +
+      (POOL.length || DATA.length) + " countries · updated " + when + stale +
       " · source " + (META.source||"—");
   }
 

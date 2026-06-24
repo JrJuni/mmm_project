@@ -1,0 +1,25 @@
+# crontab.example — daily collection schedule for mmm-search-mcp
+#
+# The collector is the ONLY cost-bearing component (it calls SerpApi). Run it
+# once a day: the free plan is 250 searches/month and one run = 2 calls
+# (~60/month at this cadence). Do NOT run it from the MCP server or the web UI —
+# that is what keeps the cost channel closed.
+#
+# Install:  crontab -e    then paste the line below (adjust path + python).
+# Verify:   crontab -l
+# The collector reads SERPAPI_KEY from the environment or the project .env.
+
+# Daily at 06:00 — run the collector, append stdout/stderr to a log.
+0 6 * * * cd /path/to/mmm_project && /usr/bin/python -m collector.fetch_data >> collect.log 2>&1
+
+# ---------------------------------------------------------------------------
+# Manual / ad-hoc refresh (developer, in a terminal — NOT a cron, NOT MCP):
+#
+#   python -m collector.admin refresh
+#
+# This is the sanctioned manual path. `collector/admin.py` is a CLI, never an
+# MCP tool, so it stays off the read-only server surface (see docs/security.md).
+#
+# Windows (no cron): use Task Scheduler to run, daily, in the project directory:
+#   python -m collector.fetch_data
+# with SERPAPI_KEY available (e.g. via .env).

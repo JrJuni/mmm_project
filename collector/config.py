@@ -71,6 +71,12 @@ class CollectorConfig:
     # actually changes (Trends is weekly-ish; Keyword Planner is monthly).
     refreshes_per_day: int = 1
 
+    # --- Freshness -------------------------------------------------------
+    # How old the cache may get before readers flag it stale. Google Trends is
+    # weekly-ish, so ~3 days is a sane default for a daily collector (it tolerates
+    # a missed run or two). Surfaced in `config_doctor` and the grid footer.
+    staleness_max_hours: int = 72
+
     # --- Timeframes ------------------------------------------------------
     # Length (days) of each comparison window. The current window is the last
     # `window_days`; the previous window is the `window_days` immediately

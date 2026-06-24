@@ -52,7 +52,9 @@ defaults. The MCP server and UI never read or write overrides.
     "periods": 2,
     "country_count": 111,
     "display_n": 12,
-    "selected_countries": []
+    "selected_countries": [],
+    "staleness_max_hours": 72,
+    "quota": { "projected_monthly_calls": 60, "monthly_budget": 250, "within_budget": true }
   },
   "countries": [
     {

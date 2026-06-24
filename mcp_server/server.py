@@ -93,7 +93,18 @@ def config_doctor() -> dict[str, Any]:
             ),
         }
     meta = cache.get("meta", {})
-    stale = _staleness_hours(meta.get("updated_at", ""))
+    hours = _staleness_hours(meta.get("updated_at", ""))
+    max_hours = meta.get("staleness_max_hours", 72)
+    is_stale = hours is not None and hours > max_hours
+    note = (
+        "Read-only cache. Refresh cadence is controlled by cron, not by this "
+        "server."
+    )
+    if is_stale:
+        note = (
+            f"Cache is STALE: {hours}h old (limit {max_hours}h). Run the "
+            "collector via cron or `python -m collector.admin refresh`."
+        )
     return {
         "ready": True,
         "keyword": meta.get("keyword"),
@@ -101,11 +112,11 @@ def config_doctor() -> dict[str, Any]:
         "source": meta.get("source"),
         "country_count": meta.get("country_count"),
         "updated_at": meta.get("updated_at"),
-        "staleness_hours": stale,
-        "note": (
-            "Read-only cache. Refresh cadence is controlled by cron, not by "
-            "this server."
-        ),
+        "staleness_hours": hours,
+        "staleness_max_hours": max_hours,
+        "stale": is_stale,
+        "quota": meta.get("quota"),
+        "note": note,
     }
 
 

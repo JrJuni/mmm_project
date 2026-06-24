@@ -101,14 +101,16 @@ Goal: lock in cost/legal assumptions so cadence and release messaging are honest
 
 Goal: make the daily collection runnable and observably within budget.
 
-- [ ] `crontab.example` — daily 24h schedule
-      (`0 6 * * * cd .../collector && python -m collector.fetch_data`).
-- [ ] Document a private admin manual-refresh path (run the collector
-      directly). MUST NOT be exposed as an MCP/UI tool (cost-channel rule).
-- [ ] Confirm `config_doctor` surfaces quota projection + `within_budget` and
-      last-`updated_at` staleness clearly.
-- [ ] Decide staleness policy: how old is `data.json` allowed to get before the
-      grid/MCP flag it (Trends is weekly-ish, so ~2-3 days is fine).
+- [x] `crontab.example` — daily 24h schedule shipped (with Windows Task
+      Scheduler + manual-refresh notes).
+- [x] Private admin manual-refresh path = `python -m collector.admin refresh`
+      (CLI, never MCP/UI). Documented in `crontab.example` + `docs/security.md`.
+- [x] `config_doctor` surfaces quota (`projected_monthly_calls`,
+      `monthly_budget`, `within_budget`) + `stale`/`staleness_hours` clearly.
+      Collector writes these into `data.json` meta so the read path stays
+      decoupled from collector config.
+- [x] Staleness policy = `config.staleness_max_hours` (default 72h / 3 days).
+      `config_doctor.stale` and the grid footer flag it past the limit.
 - [x] Widen `collector/countries.py` continent mapping — done 2026-06-24. Now a
       broad world map; a live 111-country pull mapped 111/111 (was 6/12 Unknown).
 

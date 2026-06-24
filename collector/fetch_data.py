@@ -172,6 +172,15 @@ def collect(cfg: CollectorConfig = DEFAULT_CONFIG) -> dict[str, Any]:
             # lookup). Selection filters this cached pool; it never re-fetches.
             "display_n": cfg.display_n,
             "selected_countries": cfg.selected_countries or [],
+            # Freshness + quota surfaced to read-only consumers so the MCP
+            # server and grid need not import collector config (keeps the
+            # read path decoupled). All informational.
+            "staleness_max_hours": cfg.staleness_max_hours,
+            "quota": {
+                "projected_monthly_calls": cfg.projected_monthly_calls(),
+                "monthly_budget": cfg.monthly_quota_budget,
+                "within_budget": cfg.within_budget(),
+            },
         },
         "countries": records,
     }
