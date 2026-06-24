@@ -30,6 +30,25 @@ extension — not the core build, which is done.
   `main` pushed. `.env` and `data/data.json` gitignored;
   `data/data.sample.json` shipped.
 
+## Verified end-to-end (2026-06-24)
+
+P1 runtime verification ran against the real SerpApi free tier (per plan
+`env-playful-falcon.md`). Results:
+
+- `.env` loader added to `collector/config.py` — a key placed in `.env` is now
+  picked up automatically; a real environment variable still wins. Closes the
+  "docs promised `.env` but code only read `os.environ`" gap.
+- **Bug found & fixed:** `previous_timeframe = "now 14-d"` was rejected by
+  SerpApi (HTTP 400 "Invalid date format" — `now N-d` only supports N in 1/7).
+  The collector could never complete a live run. Replaced with explicit
+  `YYYY-MM-DD YYYY-MM-DD` date ranges via `config.window_days` + `timeframes()`.
+- Live collect wrote 12 countries (2 SerpApi calls); smoke test PASS; all four
+  read-only MCP tools return; cache-preservation-on-error confirmed (the HTTP
+  400 left the old cache untouched); no 64-hex key leaked into any tracked file.
+- **New data-quality item (not a blocker):** 6/12 returned countries map to
+  `continent: "Unknown"` (e.g. TN=Tunisia, MU=Mauritius missing from
+  `collector/countries.py`). Widen the mapping — see Stream B.
+
 ## Current active streams
 
 ### Stream A — SerpApi free-tier policy (confirmed, low risk)
@@ -59,6 +78,9 @@ Goal: make the daily collection runnable and observably within budget.
       last-`updated_at` staleness clearly.
 - [ ] Decide staleness policy: how old is `data.json` allowed to get before the
       grid/MCP flag it (Trends is weekly-ish, so ~2-3 days is fine).
+- [ ] Widen `collector/countries.py` continent mapping — live run showed 6/12
+      countries as `Unknown` (TN, MU, etc.). Affects `get_continent_summary`
+      and the grid's continent color mode.
 
 ### Stream C — Docs & release maturation
 
