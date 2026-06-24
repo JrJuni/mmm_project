@@ -116,14 +116,26 @@ After connecting, ask the assistant to run `config_doctor` first.
 These are developer actions via the CLI `collector/admin.py` — never MCP:
 
 ```bash
-python -m collector.admin set-keyword "YourBrand"   # then run: refresh
-python -m collector.admin select US KR JP           # show exactly these
-python -m collector.admin clear-select              # back to the default view
+python -m collector.admin set-keyword "YourBrand"      # primary (grid/WoW/MCP)
+python -m collector.admin set-keywords A B C           # compare companies (Trend, <=5)
+python -m collector.admin select US KR JP              # show exactly these
+python -m collector.admin clear-select                 # back to the default view
 ```
 
 The grid defaults to the 12 largest economies. Collection changes (keyword/geo)
-re-fetch; selection changes are display-only and cost no quota. See
-`docs/tool-surfaces.md`.
+re-fetch; selection changes are display-only and cost no quota. The Trend index
+compares multiple keywords (companies); only `keywords[0]` drives the grid/WoW/
+MCP. See `docs/tool-surfaces.md`.
+
+For a dev grid where you can **edit the compared keywords in the browser**, serve
+with the local dev server instead of `http.server`:
+
+```bash
+python -m collector.serve     # static grid + POST /api/keywords (LOCAL DEV ONLY)
+```
+
+That endpoint triggers a collection on demand — it is local/dev only and never
+part of the shipped, read-only surfaces (see `docs/security.md`).
 
 ## First useful questions
 

@@ -71,6 +71,10 @@
   .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
   .spark-axis{display:flex; justify-content:space-between; font-size:9px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
   .kwchip{cursor:pointer;}
+  .kwtag{display:inline-flex; align-items:center; gap:5px; border:0.5px solid var(--border2); border-radius:12px; padding:2px 8px; margin-right:6px; font-size:12px;}
+  .kwtag .kx{cursor:pointer; color:var(--hint); font-weight:600;}
+  .kwtag .kx:hover{color:var(--down);}
+  #kw-input{padding:4px 8px; border:0.5px solid var(--border2); border-radius:6px; background:transparent; color:var(--fg); font:inherit; font-size:13px;}
   .alarm{background:rgba(226,75,74,0.12); border:0.5px solid var(--down); border-radius:var(--radius-sm); padding:8px 12px; margin:8px 0; font-size:13px;}
   .alarm button{margin-left:8px; padding:2px 8px;}
   .panel{display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13px; color:var(--muted);}
@@ -111,6 +115,15 @@
     <span class="demonote">company comparison · per-country lines synthetic · co-normalized 0–100</span>
   </div>
 
+  <div class="controls" id="kw-panel" hidden>
+    <span class="label">Companies</span>
+    <span id="kw-chips"></span>
+    <input id="kw-input" type="text" placeholder="add keyword" size="14">
+    <button id="kw-add">+ Add</button>
+    <button id="kw-apply">Apply &amp; collect</button>
+    <span id="kw-status" class="demonote"></span>
+  </div>
+
   <div class="grid" id="grid"></div>
   <div class="legend" id="legend"></div>
   <div class="alog" id="alert-log" hidden></div>
@@ -134,7 +147,7 @@
   var KW_COLORS = ["--blue","--purple","--teal","--amber","--coral","--pink","--green"];
   var cssv = function(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
   var mode = "chg", horizon = "3m", DATA = [], POOL = [], META = {}, TRENDS = null;
-  var KW = [], hiddenKw = {};
+  var KW = [], hiddenKw = {}, kwEdit = [];
   var grid = document.getElementById('grid'),
       legend = document.getElementById('legend'),
       errEl = document.getElementById('err');
@@ -163,6 +176,11 @@
     var w = 120, h = 30, pad = 2, all = [];
     visible.forEach(function(k){ all = all.concat(seriesMap[k]); });
     var min = Math.min.apply(null, all), max = Math.max.apply(null, all), rng = (max - min) || 1;
+    // reference vertical gridlines at quarter positions (read x-position -> date)
+    var grid = [0.25, 0.5, 0.75].map(function(f){
+      var x = (pad + (w - 2*pad) * f).toFixed(1);
+      return '<line x1="'+x+'" y1="1" x2="'+x+'" y2="'+(h-1)+'" stroke="'+cssv('--border')+'" stroke-width="0.5"/>';
+    }).join('');
     var dash = solid ? '' : ' stroke-dasharray="3 2"';
     var lines = visible.map(function(k){
       var s = seriesMap[k], n = s.length;
@@ -173,7 +191,7 @@
       }).join(' ');
       return '<polyline points="'+pts+'" fill="none" stroke="'+kwColor(kws.indexOf(k))+'" stroke-width="1.4"'+dash+'/>';
     }).join('');
-    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+lines+'</svg>';
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+grid+lines+'</svg>';
   }
 
   var SPAN = {"1d":"24h","1w":"7d","1m":"30d","3m":"3mo","1y":"12mo"};
@@ -207,6 +225,8 @@
   function render(){
     grid.innerHTML = "";
     document.getElementById('horizons').hidden = (mode !== "trend");
+    document.getElementById('kw-panel').hidden = (mode !== "trend");
+    if(mode === "trend") renderKwChips();
     DATA.forEach(function(d){
       var el = document.createElement('div');
       el.className = "tile";
@@ -291,6 +311,42 @@
   ["1d","1w","1m","3m","1y"].forEach(function(k){
     document.getElementById("h-"+k).onclick=function(){setHorizon(k);};
   });
+
+  // --- Keyword (company) management (Trend mode) ----------------------------
+  // Apply POSTs to the LOCAL dev server (collector/serve.py), which runs the
+  // collector. With a plain static server there is no endpoint -> we show the
+  // equivalent admin command (graceful degrade; production stays read-only).
+  function renderKwChips(){
+    var box = document.getElementById('kw-chips');
+    box.innerHTML = kwEdit.map(function(k, i){
+      return '<span class="kwtag"><span class="sw" style="background:'+kwColor(i)+'"></span>'+
+        k+' <b class="kx" data-i="'+i+'">×</b></span>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.kx'), function(el){
+      el.onclick = function(){ kwEdit.splice(+el.getAttribute('data-i'), 1); renderKwChips(); };
+    });
+  }
+  function addKeyword(){
+    var inp = document.getElementById('kw-input'), v = inp.value.trim();
+    if(v && kwEdit.indexOf(v) < 0 && kwEdit.length < 5){ kwEdit.push(v); renderKwChips(); }
+    inp.value = "";
+  }
+  document.getElementById('kw-add').onclick = addKeyword;
+  document.getElementById('kw-input').onkeydown = function(e){ if(e.key === "Enter") addKeyword(); };
+  document.getElementById('kw-apply').onclick = function(){
+    var st = document.getElementById('kw-status');
+    if(!kwEdit.length){ st.textContent = "add at least one keyword"; return; }
+    st.textContent = "collecting… (SerpApi)";
+    fetch('/api/keywords', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keywords: kwEdit }) })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(res){ st.textContent = "collected: " + res.keywords.join(', '); return loadTrends().then(render); })
+      .catch(function(){
+        st.innerHTML = 'no local collector — run <code>python -m collector.serve</code>, or ' +
+          '<code>python -m collector.admin set-keywords ' + kwEdit.join(' ') +
+          '</code> then <code>python -m collector.trends</code>';
+      });
+  };
 
   // Selection is a DISPLAY filter over the cached pool — no SerpApi call.
   // If meta.selected_countries is set, show exactly those; otherwise show the
@@ -424,7 +480,7 @@
   function loadTrends(){
     return fetch('../data/trends.json?ts=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(t){ TRENDS = t; KW = (t && t.meta && t.meta.keywords) || []; if(mode==="trend") render(); })
+      .then(function(t){ TRENDS = t; KW = (t && t.meta && t.meta.keywords) || []; kwEdit = KW.slice(); if(mode==="trend") render(); })
       .catch(function(){ TRENDS = null; });
   }
 

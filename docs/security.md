@@ -59,6 +59,15 @@ model or by untrusted content. Keep it that way — never expose `admin.py`'s
 operations over MCP, and never wire them to untrusted input. Doing so would add
 back the write/refresh channel this design removes.
 
+`collector/serve.py` is the HTTP sibling of that CLI: a **local dev web server**
+that serves the static grid and exposes `POST /api/keywords`, which lets the dev
+grid edit the compared keywords and trigger a trends collection on demand. It is
+the one place a browser can cause a SerpApi call, so it is **local/dev only** —
+NOT shipped, NOT the MCP server, and must never be exposed publicly. The
+production surfaces (the static grid and the read-only MCP server) have no such
+endpoint; the grid's keyword panel degrades to printing the equivalent admin
+command when served statically. The cost ceiling in production is unchanged.
+
 Note on display vs collection: choosing which countries to *show*
 (`selected_countries`, `display_n`) filters the already-cached pool and triggers
 no SerpApi call, so a read-only selection capability (UI or a future read-only

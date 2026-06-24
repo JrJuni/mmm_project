@@ -86,9 +86,13 @@ grid; a "biggest movers" view; the read-only `find_market` MCP lookup tool.
   stay on the **primary** keyword (`keywords[0]`). `admin set-keywords A B C`.
 - **Continent grid mode removed**; default mode is now **WoW change**.
   `countries.py` / continent field / `get_continent_summary` kept (GEO_MAP+MCP).
-- **Deferred — Phase B (needs separate approval, touches the cost firewall):**
-  live keyword input from the grid/MCP → on-demand collection via a LOCAL dev
-  web server (`collector/serve.py`), not the read-only MCP. See plan.
+- **Phase B shipped (local dev only):** `collector/serve.py` — a local dev web
+  server (static grid + `POST /api/keywords`) lets the grid's "Companies" panel
+  add/remove keywords and trigger a collection on demand. LOCAL/DEV only, not the
+  MCP server; the grid degrades to an admin command when served statically. The
+  production cost firewall is unchanged. Chart now has reference vertical
+  gridlines. Remaining: MCP-driven keyword changes (still read-only-incompatible
+  — would need the same controlled-trigger treatment).
 
 ## Current active streams
 
