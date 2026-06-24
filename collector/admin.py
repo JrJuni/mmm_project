@@ -92,6 +92,15 @@ def cmd_set_keyword(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_set_keywords(args: argparse.Namespace) -> int:
+    kws = [k.strip() for k in args.keywords if k.strip()][:5]
+    if not kws:
+        print("[error] no keywords given", file=sys.stderr)
+        return 1
+    _set("keywords", kws)
+    return 0
+
+
 def cmd_set_geo(args: argparse.Namespace) -> int:
     _set("geo", args.geo)
     return 0
@@ -150,9 +159,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("show", help="print the effective config").set_defaults(func=cmd_show)
 
-    sp = sub.add_parser("set-keyword", help="set the tracked keyword")
+    sp = sub.add_parser("set-keyword", help="set the (primary) tracked keyword")
     sp.add_argument("keyword")
     sp.set_defaults(func=cmd_set_keyword)
+
+    sp = sub.add_parser("set-keywords", help="set keywords for Trend comparison (<=5; first is primary)")
+    sp.add_argument("keywords", nargs="+")
+    sp.set_defaults(func=cmd_set_keywords)
 
     sp = sub.add_parser("set-geo", help='set geo ("" = worldwide)')
     sp.add_argument("geo")

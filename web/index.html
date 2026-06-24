@@ -70,6 +70,7 @@
   .tile.demo{border-style:dashed;}
   .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
   .spark-axis{display:flex; justify-content:space-between; font-size:9px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
+  .kwchip{cursor:pointer;}
   .alarm{background:rgba(226,75,74,0.12); border:0.5px solid var(--down); border-radius:var(--radius-sm); padding:8px 12px; margin:8px 0; font-size:13px;}
   .alarm button{margin-left:8px; padding:2px 8px;}
   .panel{display:flex; align-items:center; gap:8px; margin:0 0 10px; font-size:13px; color:var(--muted);}
@@ -94,9 +95,8 @@
 
   <div class="controls">
     <span class="label">Shade by</span>
-    <button id="m-cont" class="on">Continent</button>
     <button id="m-trend">Trend index</button>
-    <button id="m-chg">WoW change</button>
+    <button id="m-chg" class="on">WoW change</button>
     <span class="spacer"></span>
     <button id="refresh"><span id="rtxt">Refresh</span></button>
   </div>
@@ -108,7 +108,7 @@
     <button id="h-1m">1m</button>
     <button id="h-3m" class="on">3m</button>
     <button id="h-1y">1y</button>
-    <span class="demonote">synthetic demo · index 0–100 (each window scaled separately)</span>
+    <span class="demonote">company comparison · per-country lines synthetic · co-normalized 0–100</span>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -130,15 +130,11 @@
 
 <script>
 (function(){
-  var RAMP = {
-    "N. America":["--blue-bg","--blue"], "Asia":["--purple-bg","--purple"],
-    "Europe":["--teal-bg","--teal"], "Oceania":["--amber-bg","--amber"],
-    "S. America":["--coral-bg","--coral"], "M. East":["--pink-bg","--pink"],
-    "Africa":["--green-bg","--green"], "Unknown":["--gray-bg","--gray"]
-  };
-  var CONTS = ["N. America","Asia","Europe","Oceania","S. America","M. East","Africa"];
+  // Line-color palette for keyword (company) comparison in Trend mode.
+  var KW_COLORS = ["--blue","--purple","--teal","--amber","--coral","--pink","--green"];
   var cssv = function(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
-  var mode = "cont", horizon = "3m", DATA = [], POOL = [], META = {}, TRENDS = null;
+  var mode = "chg", horizon = "3m", DATA = [], POOL = [], META = {}, TRENDS = null;
+  var KW = [], hiddenKw = {};
   var grid = document.getElementById('grid'),
       legend = document.getElementById('legend'),
       errEl = document.getElementById('err');
@@ -156,20 +152,28 @@
                : "rgba(226,75,74,"+(0.10+t*0.45).toFixed(2)+")";
   }
 
-  function spark(series, solid){
-    if(!series || !series.length) return '';
-    var n = series.length, w = 120, h = 30, pad = 2;
-    var max = Math.max.apply(null, series), min = Math.min.apply(null, series);
-    var rng = (max - min) || 1;
-    var pts = series.map(function(v, i){
-      var x = pad + (w - 2*pad) * (i / (n - 1 || 1));
-      var y = pad + (h - 2*pad) * (1 - (v - min) / rng);
-      return x.toFixed(1) + ',' + y.toFixed(1);
-    }).join(' ');
-    var col = series[n-1] >= series[0] ? cssv('--up') : cssv('--down');
+  function kwColor(i){ return cssv(KW_COLORS[i % KW_COLORS.length]); }
+
+  // Draw one polyline per keyword, co-normalized across all visible keywords so
+  // the lines are comparable. seriesMap = {kw: [points]}. solid=real, dashed=synthetic.
+  function multiSpark(seriesMap, kws, solid){
+    if(!seriesMap) return '';
+    var visible = kws.filter(function(k){ return seriesMap[k] && seriesMap[k].length && !hiddenKw[k]; });
+    if(!visible.length) return '';
+    var w = 120, h = 30, pad = 2, all = [];
+    visible.forEach(function(k){ all = all.concat(seriesMap[k]); });
+    var min = Math.min.apply(null, all), max = Math.max.apply(null, all), rng = (max - min) || 1;
     var dash = solid ? '' : ' stroke-dasharray="3 2"';
-    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+
-      '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5"'+dash+'/></svg>';
+    var lines = visible.map(function(k){
+      var s = seriesMap[k], n = s.length;
+      var pts = s.map(function(v, i){
+        var x = pad + (w - 2*pad) * (i / (n - 1 || 1));
+        var y = pad + (h - 2*pad) * (1 - (v - min) / rng);
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      return '<polyline points="'+pts+'" fill="none" stroke="'+kwColor(kws.indexOf(k))+'" stroke-width="1.4"'+dash+'/>';
+    }).join('');
+    return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none">'+lines+'</svg>';
   }
 
   var SPAN = {"1d":"24h","1w":"7d","1m":"30d","3m":"3mo","1y":"12mo"};
@@ -210,27 +214,19 @@
       if(mode==="trend"){
         el.classList.add('demo');
         var cs = (TRENDS && TRENDS.by_country && TRENDS.by_country[d.country_code]) || null;
-        var series = cs ? cs[horizon] : null;
+        var seriesMap = cs ? cs[horizon] : null;
         var gblk = (TRENDS && TRENDS.global && TRENDS.global[horizon]) || null;
-        var last = series && series.length ? series[series.length-1] : null;
-        if(series) el.title = spanTitle(gblk, horizon) + " · latest " + last + "/100 (synthetic)";
+        if(seriesMap) el.title = spanTitle(gblk, horizon) + " (synthetic per-country)";
         el.innerHTML =
           '<div><div class="name">'+d.country_code+'</div>'+
           '<div class="sub">'+sub+'</div></div>'+
-          (series ? spark(series, false) + axisRow(gblk, horizon)
-                  : '<div class="val" style="opacity:.5">no data</div>');
+          (seriesMap ? multiSpark(seriesMap, KW, false) + axisRow(gblk, horizon)
+                     : '<div class="val" style="opacity:.5">no data</div>');
       } else {
-        var bg = "transparent", val = "";
         var p = d.change_pct;
-        if(mode==="cont"){
-          var r = RAMP[d.continent] || RAMP.Unknown;
-          bg = cssv(r[0]); fg = cssv(r[1]);
-          val = d.interest;
-        } else {
-          bg = chgShade(p);
-          val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
-          if(isAlert(d)) el.classList.add('alarm-tile');
-        }
+        var bg = chgShade(p);
+        var val = (p===null||p===undefined) ? "—" : (p>=0?"+":"")+p+"%";
+        if(isAlert(d)) el.classList.add('alarm-tile');
         el.style.background = bg;
         el.innerHTML =
           '<div><div class="name" style="color:'+fg+'">'+d.country_code+'</div>'+
@@ -251,39 +247,37 @@
   function renderLegend(){
     legend.innerHTML = "";
     if(mode==="trend"){
+      // keyword (company) color chips — click to show/hide a line
+      KW.forEach(function(k, i){
+        var off = hiddenKw[k] ? ' style="opacity:.35"' : '';
+        legend.innerHTML += '<span class="lg kwchip" data-k="'+k+'"'+off+'>'+
+          '<span class="sw" style="background:'+kwColor(i)+'"></span>'+k+'</span>';
+      });
       var gblk = TRENDS && TRENDS.global && TRENDS.global[horizon];
-      var g = gblk && gblk.points;
-      legend.innerHTML =
+      var gs = gblk && gblk.series;
+      legend.innerHTML +=
         '<span class="lg">worldwide (live)</span>' +
-        '<span class="lg" style="width:130px;display:inline-block" title="' + (g ? spanTitle(gblk, horizon) : '') + '">' + (g ? spark(g, true) : '<span class="demonote">run collector/trends.py</span>') + '</span>' +
-        '<span class="lg demonote">' + (g ? spanTitle(gblk, horizon) + ' · ' : '') + 'dashed = synthetic demo</span>';
+        '<span class="lg" style="width:130px;display:inline-block" title="' + (gs ? spanTitle(gblk, horizon) : '') + '">' + (gs ? multiSpark(gs, KW, true) : '<span class="demonote">run collector/trends.py</span>') + '</span>' +
+        '<span class="lg demonote">solid = worldwide live · dashed = synthetic per-country</span>';
+      Array.prototype.forEach.call(legend.querySelectorAll('.kwchip'), function(el){
+        el.onclick = function(){ var k = el.getAttribute('data-k'); hiddenKw[k] = !hiddenKw[k]; render(); };
+      });
       return;
     }
-    if(mode==="cont"){
-      CONTS.forEach(function(k){
-        if(!DATA.some(function(d){return d.continent===k;})) return;
-        legend.innerHTML += '<span class="lg"><span class="sw" style="background:'+cssv(RAMP[k][1])+'"></span>'+k+'</span>';
-      });
-    } else if(mode==="vol"){
-      legend.innerHTML =
-        '<span class="lg"><span class="sw" style="background:rgba(55,138,221,0.15)"></span>lower</span>'+
-        '<span class="lg"><span class="sw" style="background:rgba(55,138,221,0.5)"></span>higher interest</span>';
-    } else {
-      legend.innerHTML =
-        '<span class="lg"><span class="sw" style="background:rgba(226,75,74,0.45)"></span>declining</span>'+
-        '<span class="lg"><span class="sw" style="background:rgba(99,153,34,0.45)"></span>growing vs last week</span>';
-    }
+    // WoW change legend
+    legend.innerHTML =
+      '<span class="lg"><span class="sw" style="background:rgba(226,75,74,0.45)"></span>declining</span>'+
+      '<span class="lg"><span class="sw" style="background:rgba(99,153,34,0.45)"></span>growing vs last week</span>';
   }
 
   function setMode(m){
     mode = m;
-    [["cont","m-cont"],["trend","m-trend"],["chg","m-chg"]].forEach(function(pair){
+    [["trend","m-trend"],["chg","m-chg"]].forEach(function(pair){
       document.getElementById(pair[1]).classList.toggle("on", pair[0]===m);
     });
     render();
     renderAlerts();
   }
-  document.getElementById('m-cont').onclick=function(){setMode("cont");};
   document.getElementById('m-trend').onclick=function(){setMode("trend");};
   document.getElementById('m-chg').onclick=function(){setMode("chg");};
 
@@ -430,7 +424,7 @@
   function loadTrends(){
     return fetch('../data/trends.json?ts=' + Date.now())
       .then(function(r){ return r.ok ? r.json() : null; })
-      .then(function(t){ TRENDS = t; if(mode==="trend") render(); })
+      .then(function(t){ TRENDS = t; KW = (t && t.meta && t.meta.keywords) || []; if(mode==="trend") render(); })
       .catch(function(){ TRENDS = null; });
   }
 

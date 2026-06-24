@@ -20,8 +20,11 @@ from pathlib import Path
 @dataclass(frozen=True)
 class CollectorConfig:
     # --- What to track ---------------------------------------------------
-    # Keep this list short on the free tier. Each keyword costs
-    # (periods_per_keyword) successful SerpApi searches per refresh.
+    # keywords[0] is the PRIMARY keyword: the GEO_MAP country grid, WoW, and MCP
+    # all use it. The full list (up to 5) additionally drives the multi-keyword
+    # company comparison in the Trend index (`collector/trends.py`), where
+    # SerpApi compares all of them in one co-normalized call per horizon.
+    # Keep it short on the free tier.
     keywords: list[str] = field(default_factory=lambda: ["Arencia"])
 
     # Geo scope. "" = worldwide. SerpApi returns per-country breakdown when

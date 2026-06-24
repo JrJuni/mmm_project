@@ -37,15 +37,16 @@ def check(name: str, ok: bool) -> bool:
 def main() -> int:
     passed = True
 
+    # Test the SHIPPED defaults, independent of any local dev_overrides.json.
+    c = CollectorConfig()
+
     # quota
     passed &= check(
         "quota within budget (default)",
-        DEFAULT_CONFIG.within_budget()
-        and DEFAULT_CONFIG.projected_monthly_calls() == 60,
+        c.within_budget() and c.projected_monthly_calls() == 60,
     )
 
     # config shape: full pool + display/selection defaults + date-range timeframes
-    c = DEFAULT_CONFIG
     passed &= check("top_n default None (full pool)", c.top_n is None)
     passed &= check("display_n default 12", c.display_n == 12)
     passed &= check("selected_countries default = GDP12", c.selected_countries[:3] == ["US", "CN", "DE"])
@@ -67,7 +68,7 @@ def main() -> int:
     # aggregation
     cur = {"US": 87, "JP": 62, "KR": 58, "ZZ": 0}
     prev = {"US": 72, "JP": 69, "KR": 42, "ZZ": 0}
-    recs = build_records(cur, prev, DEFAULT_CONFIG)
+    recs = build_records(cur, prev, c)
     passed &= check("zero rows dropped", all(r["country_code"] != "ZZ" for r in recs))
     passed &= check("sorted by interest desc", [r["interest"] for r in recs] == sorted(
         (r["interest"] for r in recs), reverse=True))
