@@ -119,16 +119,16 @@ Goal: make the daily collection runnable and observably within budget.
 Goal: port the useful structure from the sibling `deal-intel-mcp/docs/` and get
 release-ready. (Reuse assessment in progress; see "Docs to port" below.)
 
-- [ ] Port a tailored `release-publish-checklist.md` (gate before any tag).
-- [ ] Port a tailored `mvp-readiness.md` gate (what "good enough to share" means
-      for a read-only data product).
-- [ ] Port a `tool-surfaces.md` documenting the read-only MCP surface and the
-      explicit NO-write/refresh/send rule.
-- [ ] Port an `extending.md` centered on the `fetch_interest_by_country`
-      adapter seam (provider swaps).
-- [ ] Start a `lesson-learned.md` for this repo.
-- [ ] README: add quota-math section + keyword-add recalculation guidance +
-      `.env` per-user key alias recommendation.
+- [x] `docs/release-checklist.md` — release gate, shipped.
+- [x] `docs/tool-surfaces.md` — read-only MCP surface vs hidden dev admin CLI,
+      shipped 2026-06-24.
+- [x] `docs/extending.md` — adapter-seam-centered extension guide, shipped
+      2026-06-24.
+- [x] `docs/lessons-learned.md` — append-only log, started.
+- [x] README: quota-math + keyword-add guidance + `.env` per-user key alias.
+- [ ] (optional, REUSE-LOW) `mvp-readiness.md` gate — fold into
+      `release-checklist.md` if/when a formal "good enough to share" gate is
+      wanted; not blocking.
 
 ### Stream D — Future / extension points (not now)
 

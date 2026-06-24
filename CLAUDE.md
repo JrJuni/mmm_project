@@ -90,3 +90,7 @@ MIT-licensed. Prefer small explicit changes. Record meaningful local
 modifications in `docs/` so future agents understand what changed. The most
 common customization is swapping the data source at the adapter seam or adding
 keywords in `collector/config.py` (mind the quota math).
+
+See `docs/extending.md` for the adapter seam and customization paths, and
+`docs/tool-surfaces.md` for the read-only MCP surface vs the hidden dev admin
+CLI (`collector/admin.py`).
