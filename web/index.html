@@ -68,6 +68,7 @@
   .demonote{font-size:12px; color:var(--hint); font-style:italic;}
   .tile.demo{border-style:dashed;}
   .tile.demo .name::after{content:" ·demo"; font-size:10px; font-weight:400; color:var(--hint);}
+  .spark-cap{font-size:10px; color:var(--hint); margin-top:3px; font-variant-numeric:tabular-nums;}
 </style>
 </head>
 <body>
@@ -93,7 +94,7 @@
     <button id="h-1m">1m</button>
     <button id="h-3m" class="on">3m</button>
     <button id="h-1y">1y</button>
-    <span class="demonote">per-country lines are synthetic demo data</span>
+    <span class="demonote">synthetic demo · index 0–100 (each window scaled separately)</span>
   </div>
 
   <div class="grid" id="grid"></div>
@@ -150,6 +151,19 @@
       '<polyline points="'+pts+'" fill="none" stroke="'+col+'" stroke-width="1.5"'+dash+'/></svg>';
   }
 
+  var SPAN = {"1d":"24h","1w":"7d","1m":"30d","3m":"3mo","1y":"12mo"};
+  function fmtTs(ts, hz){
+    if(!ts) return "?";
+    var d = new Date(ts*1000);
+    if(hz==="1d" || hz==="1w")
+      return d.toLocaleString([], {month:'short', day:'numeric', hour:'numeric'});
+    return d.toLocaleDateString([], {year:'2-digit', month:'short', day:'numeric'});
+  }
+  function spanTitle(g, hz){
+    if(!g || !g.start_ts || !g.end_ts) return SPAN[hz] || hz;
+    return fmtTs(g.start_ts, hz) + " – " + fmtTs(g.end_ts, hz);
+  }
+
   function render(){
     grid.innerHTML = "";
     document.getElementById('horizons').hidden = (mode !== "trend");
@@ -161,10 +175,14 @@
         el.classList.add('demo');
         var cs = (TRENDS && TRENDS.by_country && TRENDS.by_country[d.country_code]) || null;
         var series = cs ? cs[horizon] : null;
+        var gblk = (TRENDS && TRENDS.global && TRENDS.global[horizon]) || null;
+        var last = series && series.length ? series[series.length-1] : null;
+        if(series) el.title = spanTitle(gblk, horizon) + " · latest " + last + "/100 (synthetic)";
         el.innerHTML =
           '<div><div class="name">'+d.country_code+'</div>'+
           '<div class="sub">'+sub+'</div></div>'+
-          (series ? spark(series, false)
+          (series ? spark(series, false) +
+              '<div class="spark-cap">last '+SPAN[horizon]+' · '+last+'/100</div>'
                   : '<div class="val" style="opacity:.5">no data</div>');
       } else {
         var bg = "transparent", val = "";
@@ -197,11 +215,12 @@
   function renderLegend(){
     legend.innerHTML = "";
     if(mode==="trend"){
-      var g = TRENDS && TRENDS.global && TRENDS.global[horizon] && TRENDS.global[horizon].points;
+      var gblk = TRENDS && TRENDS.global && TRENDS.global[horizon];
+      var g = gblk && gblk.points;
       legend.innerHTML =
         '<span class="lg">worldwide (live)</span>' +
-        '<span class="lg" style="width:130px;display:inline-block">' + (g ? spark(g, true) : '<span class="demonote">run collector/trends.py</span>') + '</span>' +
-        '<span class="lg demonote">dashed = synthetic per-country demo</span>';
+        '<span class="lg" style="width:130px;display:inline-block" title="' + (g ? spanTitle(gblk, horizon) : '') + '">' + (g ? spark(g, true) : '<span class="demonote">run collector/trends.py</span>') + '</span>' +
+        '<span class="lg demonote">' + (g ? spanTitle(gblk, horizon) + ' · ' : '') + 'dashed = synthetic demo</span>';
       return;
     }
     if(mode==="cont"){

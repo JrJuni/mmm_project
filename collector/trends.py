@@ -49,9 +49,20 @@ HORIZONS: dict[str, str] = {
 }
 
 
-def fetch_timeseries(keyword: str, api_key: str, geo: str = "") -> dict[str, list[int]]:
-    """Return {horizon: [interest_0_100, ...]} for one keyword (real SerpApi)."""
-    out: dict[str, list[int]] = {}
+def _ts(pt: dict) -> int | None:
+    try:
+        return int(pt.get("timestamp"))
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_timeseries(keyword: str, api_key: str, geo: str = "") -> dict[str, dict]:
+    """Return {horizon: {"points": [...], "start_ts": int, "end_ts": int}}.
+
+    `points` is the 0-100 interest series; `start_ts`/`end_ts` are unix seconds
+    of the first/last timeline point (for axis labels). Real SerpApi data.
+    """
+    out: dict[str, dict] = {}
     for label, date in HORIZONS.items():
         params = {
             "engine": "google_trends",
@@ -73,10 +84,15 @@ def fetch_timeseries(keyword: str, api_key: str, geo: str = "") -> dict[str, lis
         if "error" in payload:
             raise FetchError(f"SerpApi error for '{label}': {payload['error']}")
         timeline = payload.get("interest_over_time", {}).get("timeline_data", [])
-        out[label] = [
+        points = [
             int((pt.get("values") or [{}])[0].get("extracted_value") or 0)
             for pt in timeline
         ]
+        out[label] = {
+            "points": points,
+            "start_ts": _ts(timeline[0]) if timeline else None,
+            "end_ts": _ts(timeline[-1]) if timeline else None,
+        }
     return out
 
 
@@ -124,11 +140,12 @@ def build(cfg=DEFAULT_CONFIG) -> dict:
     keyword = cfg.keywords[0]
 
     # Real worldwide series (5 calls).
-    global_ts = fetch_timeseries(keyword, api_key, geo=cfg.geo)
+    global_raw = fetch_timeseries(keyword, api_key, geo=cfg.geo)
     global_block = {
-        h: {"source": "serpapi:google_trends:TIMESERIES", "points": pts}
-        for h, pts in global_ts.items()
+        h: {"source": "serpapi:google_trends:TIMESERIES", **b}
+        for h, b in global_raw.items()
     }
+    global_ts = {h: b["points"] for h, b in global_raw.items()}
 
     # Synthetic per-country placeholders for the displayed countries.
     selected = cfg.selected_countries or []
