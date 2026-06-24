@@ -75,6 +75,21 @@ re-collecting, while keeping the MCP surface read-only.
 Deferred (next): UI checkbox/search to drive `selected_countries` live in the
 grid; a "biggest movers" view; the read-only `find_market` MCP lookup tool.
 
+## Shipped — multi-keyword Trend comparison + remove Continent (2026-06-24)
+
+- **Trend index = company comparison.** `collector/trends.py` fetches all
+  `cfg.keywords` (<=5) in ONE co-normalized SerpApi comparison call per horizon;
+  trends.json is per-keyword (`global[h].series{kw}`, `by_country[code][h]{kw}`,
+  `meta.keywords`). Grid renders one colored line per keyword + clickable keyword
+  chips; worldwide-live solid multiline in the legend. Still 5 real calls/refresh.
+- **Scope:** multi-keyword is trends-only. GEO_MAP grid / WoW / MCP / `data.json`
+  stay on the **primary** keyword (`keywords[0]`). `admin set-keywords A B C`.
+- **Continent grid mode removed**; default mode is now **WoW change**.
+  `countries.py` / continent field / `get_continent_summary` kept (GEO_MAP+MCP).
+- **Deferred — Phase B (needs separate approval, touches the cost firewall):**
+  live keyword input from the grid/MCP → on-demand collection via a LOCAL dev
+  web server (`collector/serve.py`), not the read-only MCP. See plan.
+
 ## Current active streams
 
 ### Stream A — SerpApi free-tier policy (confirmed, low risk)
